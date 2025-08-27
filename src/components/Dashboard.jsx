@@ -43,6 +43,7 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
     }
   };
 
+
   // 处理时间筛选变化
   const handleTimeFilterChange = (value) => {
     setTimeFilter(value);
@@ -55,9 +56,10 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
     fetch(endpoint)
       .then(response => response.json())
       .then(data => {
-        const clickCounts = data.map(item => ({
-          name: item.button,
-          value: item.count
+        // 处理新的数据格式 {"add-to-cart":2,"buy-now":1}
+        const clickCounts = Object.entries(data).map(([button, count]) => ({
+          name: button,
+          value: count
         }));
         setClickCounts(clickCounts);
         setLoading(false);

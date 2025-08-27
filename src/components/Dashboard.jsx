@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Statistic, Space, Spin } from 'antd';
+import { Row, Col, Card, Statistic, Space, Spin, Radio } from 'antd';
 import { UserOutlined, ShoppingCartOutlined, DollarOutlined, RiseOutlined } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import * as echarts from 'echarts';
@@ -7,11 +7,52 @@ import * as echarts from 'echarts';
 const Dashboard = ({ chartType = 'dashboard' }) => {
   const [clickCounts, setClickCounts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const GET_CLICK_COUNTS_ENDPOINT = "http://localhost:3000/api/click-counts"
+  const [timeFilter, setTimeFilter] = useState('daily'); // 新增：时间筛选状态，默认为日
+  
+  // API端点配置
+  const GET_CLICK_COUNTS_ENDPOINT = "https://collect-vital-data.onrender.com/api/click-counts"
+  const GET_DAILY_CLICKS_ENDPOINT = "https://collect-vital-data.onrender.com/api/daily-clicks"
+  const GET_WEEKLY_CLICKS_ENDPOINT = "https://collect-vital-data.onrender.com/api/weekly-clicks"
+  const GET_MONTHLY_CLICKS_ENDPOINT = "https://collect-vital-data.onrender.com/api/monthly-clicks"
+
+  // 根据时间筛选获取对应的API端点
+  const getEndpointByTimeFilter = (filter) => {
+    switch (filter) {
+      case 'daily':
+        return GET_DAILY_CLICKS_ENDPOINT;
+      case 'weekly':
+        return GET_WEEKLY_CLICKS_ENDPOINT;
+      case 'monthly':
+        return GET_MONTHLY_CLICKS_ENDPOINT;
+      default:
+        return GET_DAILY_CLICKS_ENDPOINT;
+    }
+  };
+
+  // 获取时间筛选的显示文本
+  const getTimeFilterText = (filter) => {
+    switch (filter) {
+      case 'daily':
+        return '日';
+      case 'weekly':
+        return '周';
+      case 'monthly':
+        return '月';
+      default:
+        return '日';
+    }
+  };
+
+  // 处理时间筛选变化
+  const handleTimeFilterChange = (value) => {
+    setTimeFilter(value);
+  };
 
   useEffect(() => {
     setLoading(true);
-    fetch(GET_CLICK_COUNTS_ENDPOINT)
+    const endpoint = getEndpointByTimeFilter(timeFilter);
+    
+    fetch(endpoint)
       .then(response => response.json())
       .then(data => {
         const clickCounts = data.map(item => ({
@@ -25,7 +66,7 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
         console.error('Error fetching dashboard data:', error);
         setLoading(false);
       });
-  }, []); // 空依赖数组，只在组件挂载时执行一次
+  }, [timeFilter]); // 依赖项改为timeFilter，当时间筛选变化时重新获取数据
   // 统计数据
   const statistics = [
     {
@@ -134,7 +175,7 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
   // 饼图配置
   const getPieChartOption = () => ({
     title: {
-      text: '',
+      text: `点击数据 (${getTimeFilterText(timeFilter)})`,
       left: 'center',
       textStyle: {
         color: '#1e293b',
@@ -359,9 +400,29 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
         return <ReactECharts option={getBarChartOption()} style={{ height: '400px' }} />;
       case 'pie-chart':
         return (
-          <Spin spinning={loading} tip="loading...">
-            <ReactECharts option={getPieChartOption()} style={{ height: '400px' }} />
-          </Spin>
+          <div>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              marginBottom: '16px'
+            }}>
+              <Radio.Group 
+                value={timeFilter} 
+                onChange={(e) => handleTimeFilterChange(e.target.value)}
+                optionType="button"
+                buttonStyle="solid"
+                size="middle"
+              >
+                <Radio.Button value="daily">日</Radio.Button>
+                <Radio.Button value="weekly">周</Radio.Button>
+                <Radio.Button value="monthly">月</Radio.Button>
+              </Radio.Group>
+            </div>
+            <Spin spinning={loading} tip="loading...">
+              <ReactECharts option={getPieChartOption()} style={{ height: '400px' }} />
+            </Spin>
+          </div>
         );
       case 'line-chart':
         return <ReactECharts option={getLineChartOption()} style={{ height: '400px' }} />;
@@ -389,7 +450,25 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
               </Card>
             </Col>
             <Col xs={24} lg={12}>
-              <Card title="产品详情按钮点击数据" className="chart-container">
+              <Card 
+                title={
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>产品详情按钮点击数据</span>
+                    <Radio.Group 
+                      value={timeFilter} 
+                      onChange={(e) => handleTimeFilterChange(e.target.value)}
+                      optionType="button"
+                      buttonStyle="solid"
+                      size="small"
+                    >
+                      <Radio.Button value="daily">日</Radio.Button>
+                      <Radio.Button value="weekly">周</Radio.Button>
+                      <Radio.Button value="monthly">月</Radio.Button>
+                    </Radio.Group>
+                  </div>
+                } 
+                className="chart-container"
+              >
                 <Spin spinning={loading} tip="loading...">
                   <ReactECharts option={getPieChartOption()} style={{ height: '300px' }} />
                 </Spin>

@@ -191,7 +191,8 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
       borderColor: '#e2e8f0',
       textStyle: {
         color: '#1e293b'
-      }
+      },
+      formatter: '{a} <br/>{b}: {c} ({d}%)'
     },
     legend: {
       orient: 'vertical',
@@ -210,6 +211,17 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
           borderRadius: 6,
           borderColor: '#fff',
           borderWidth: 2
+        },
+        label: {
+          show: true,
+          position: 'inside',
+          formatter: '{c}',
+          fontSize: 14,
+          color: '#ffffff',
+          fontWeight: '600'
+        },
+        labelLine: {
+          show: false
         },
         emphasis: {
           itemStyle: {

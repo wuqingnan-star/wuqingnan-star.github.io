@@ -7,14 +7,18 @@ import {
   BarChartOutlined,
   PieChartOutlined,
   LineChartOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
+import WheelClickData from './components/WheelClickData';
 
 const { Header, Sider, Content } = Layout;
 
-function App() {
+function AppContent() {
   const [collapsed, setCollapsed] = useState(false);
-  const [selectedKey, setSelectedKey] = useState('dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
   
   const {
     token: { colorBgContainer, borderRadiusLG },
@@ -46,24 +50,38 @@ function App() {
           icon: <LineChartOutlined />,
           label: '折线图',
         },
+        {
+          key: 'wheel-click-data',
+          icon: <ThunderboltOutlined />,
+          label: '转盘点击数据',
+        },
       ],
     },
   ];
 
   const handleMenuClick = ({ key }) => {
-    setSelectedKey(key);
+    if (key === 'dashboard') {
+      navigate('/');
+    } else if (key === 'bar-chart') {
+      navigate('/bar-chart');
+    } else if (key === 'pie-chart') {
+      navigate('/pie-chart');
+    } else if (key === 'line-chart') {
+      navigate('/line-chart');
+    } else if (key === 'wheel-click-data') {
+      navigate('/wheel-click-data');
+    }
   };
 
-  const renderContent = () => {
-    switch (selectedKey) {
-      case 'dashboard':
-      case 'bar-chart':
-      case 'pie-chart':
-      case 'line-chart':
-        return <Dashboard chartType={selectedKey} />;
-      default:
-        return <Dashboard chartType="dashboard" />;
-    }
+  // 根据当前路径确定选中的菜单项
+  const getSelectedKey = () => {
+    const path = location.pathname;
+    if (path === '/') return 'dashboard';
+    if (path === '/bar-chart') return 'bar-chart';
+    if (path === '/pie-chart') return 'pie-chart';
+    if (path === '/line-chart') return 'line-chart';
+    if (path === '/wheel-click-data') return 'wheel-click-data';
+    return 'dashboard';
   };
 
   return (
@@ -83,10 +101,10 @@ function App() {
         <div className="logo">
           {collapsed ? '数据' : '数据后台'}
         </div>
-                 <Menu
+          <Menu
            theme="light"
            mode="inline"
-           selectedKeys={[selectedKey]}
+           selectedKeys={[getSelectedKey()]}
            items={menuItems}
            onClick={handleMenuClick}
          />
@@ -108,14 +126,6 @@ function App() {
               height: 64,
             }}
           />
-          <span style={{ 
-            fontSize: '18px', 
-            fontWeight: '700', 
-            color: '#1e293b',
-            letterSpacing: '1px'
-          }}>
-            数据后台管理系统
-          </span>
         </Header>
         <Content
           style={{
@@ -127,10 +137,24 @@ function App() {
             overflow: 'hidden',
           }}
         >
-          {renderContent()}
+          <Routes>
+            <Route path="/" element={<Dashboard chartType="dashboard" />} />
+            <Route path="/bar-chart" element={<Dashboard chartType="bar-chart" />} />
+            <Route path="/pie-chart" element={<Dashboard chartType="pie-chart" />} />
+            <Route path="/line-chart" element={<Dashboard chartType="line-chart" />} />
+            <Route path="/wheel-click-data" element={<WheelClickData />} />
+          </Routes>
         </Content>
       </Layout>
     </Layout>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
+    </Router>
   );
 }
 

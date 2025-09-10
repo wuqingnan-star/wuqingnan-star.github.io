@@ -1,19 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { Row, Col, Card, Statistic, Space, Spin, Radio } from 'antd';
-import { UserOutlined, ShoppingCartOutlined, DollarOutlined, RiseOutlined } from '@ant-design/icons';
+import { Row, Col, Card, Statistic, Space, Spin, Radio, DatePicker, InputNumber, Button, Typography } from 'antd';
+import { UserOutlined, ShoppingCartOutlined, DollarOutlined, RiseOutlined, ReloadOutlined } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import * as echarts from 'echarts';
+import dayjs from 'dayjs';
+
+const { RangePicker } = DatePicker;
+const { Text } = Typography;
 
 const Dashboard = ({ chartType = 'dashboard' }) => {
   const [clickCounts, setClickCounts] = useState([]);
+  const [productClickCounts, setProductClickCounts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [timeFilter, setTimeFilter] = useState('daily'); // 新增：时间筛选状态，默认为日
+  const [productLoading, setProductLoading] = useState(true);
+  const [timeFilter, setTimeFilter] = useState('daily'); // 时间筛选状态，默认为日
+  const [productDateRange, setProductDateRange] = useState([
+    dayjs().startOf('month'),
+    dayjs().endOf('month')
+  ]); // 产品饼图的日期范围筛选，默认本月
+  
+  // 计数器相关状态
+  const [currentCount, setCurrentCount] = useState(0);
+  const [originCount, setOriginCount] = useState(0);
+  const [inputValue, setInputValue] = useState(null);
+  const [counterLoading, setCounterLoading] = useState(false);
+  const [originLoading, setOriginLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   
   // API端点配置
   const GET_CLICK_COUNTS_ENDPOINT = "https://collect-vital-data.onrender.com/api/click-counts"
   const GET_DAILY_CLICKS_ENDPOINT = "https://collect-vital-data.onrender.com/api/daily-clicks"
   const GET_WEEKLY_CLICKS_ENDPOINT = "https://collect-vital-data.onrender.com/api/weekly-clicks"
   const GET_MONTHLY_CLICKS_ENDPOINT = "https://collect-vital-data.onrender.com/api/monthly-clicks"
+  const GET_DURATION_CLICKS_ENDPOINT = "https://collect-vital-data.onrender.com/api/duration-clicks"
+  const GET_CURRENT_COUNT_ENDPOINT = "https://collect-vital-data.onrender.com/api/current-count"
+  const GET_ORIGIN_COUNT_ENDPOINT = "https://collect-vital-data.onrender.com/api/origin-count"
+  const RESET_COUNTER_ENDPOINT = "https://collect-vital-data.onrender.com/api/reset-counter"
+
 
   // 根据时间筛选获取对应的API端点
   const getEndpointByTimeFilter = (filter) => {
@@ -49,6 +72,104 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
     setTimeFilter(value);
   };
 
+  // 处理产品饼图日期范围变化
+  const handleProductDateRangeChange = (dates) => {
+    setProductDateRange(dates);
+  };
+
+  // 获取当前数字
+  const fetchCurrentCount = async () => {
+    setCounterLoading(true);
+    try {
+      const response = await fetch(GET_CURRENT_COUNT_ENDPOINT);
+      const count = await response.json();
+      setCurrentCount(count);
+    } catch (error) {
+      console.error('Error fetching current count:', error);
+    } finally {
+      setCounterLoading(false);
+    }
+  };
+
+  // 获取原始数字
+  const fetchOriginCount = async () => {
+    setOriginLoading(true);
+    try {
+      const response = await fetch(GET_ORIGIN_COUNT_ENDPOINT);
+      const data = await response.json();
+      setOriginCount(data[0].count_start);
+    } catch (error) {
+      console.error('Error fetching origin count:', error);
+    } finally {
+      setOriginLoading(false);
+    }
+  };
+
+  // 重置数字
+  const handleResetCounter = async () => {
+    if (inputValue === null || inputValue === undefined) {
+      return;
+    }
+    
+    setResetLoading(true);
+    try {
+      const response = await fetch(RESET_COUNTER_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newValue: inputValue }),
+      });
+      
+      if (response.ok) {
+        // 重置成功后更新当前数字
+        setCurrentCount(inputValue);
+        setInputValue(null);
+      }
+    } catch (error) {
+      console.error('Error resetting counter:', error);
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  // 获取产品点击数据
+  const fetchProductClickData = async () => {
+    setProductLoading(true);
+    try {
+      let endpoint = GET_DURATION_CLICKS_ENDPOINT;
+      let params = new URLSearchParams();
+      
+      if (productDateRange && productDateRange.length === 2) {
+        params.append('startDate', productDateRange[0].format('YYYY-MM-DD'));
+        params.append('endDate', productDateRange[1].format('YYYY-MM-DD'));
+        endpoint += `?${params.toString()}`;
+      }
+      
+      const response = await fetch(endpoint);
+      const data = await response.json();
+      
+      // 处理产品点击数据
+      const productClicks = Object.entries(data).map(([product, count]) => ({
+        name: product,
+        value: count
+      }));
+      setProductClickCounts(productClicks);
+    } catch (error) {
+      console.error('Error fetching product click data:', error);
+      // 使用模拟数据
+      setProductClickCounts([
+        { name: '产品A', value: 45 },
+        { name: '产品B', value: 32 },
+        { name: '产品C', value: 28 },
+        { name: '产品D', value: 19 },
+        { name: '产品E', value: 15 }
+      ]);
+    } finally {
+      setProductLoading(false);
+    }
+  };
+
   useEffect(() => {
     setLoading(true);
     const endpoint = getEndpointByTimeFilter(timeFilter);
@@ -69,6 +190,18 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
         setLoading(false);
       });
   }, [timeFilter]); // 依赖项改为timeFilter，当时间筛选变化时重新获取数据
+
+  // 当产品日期范围变化时，获取产品点击数据
+  useEffect(() => {
+    fetchProductClickData();
+  }, [productDateRange]);
+
+  // 组件加载时获取当前数字和原始数字
+  useEffect(() => {
+    fetchCurrentCount();
+    fetchOriginCount();
+  }, []);
+
   // 统计数据
   const statistics = [
     {
@@ -408,6 +541,67 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
     ],
   });
 
+  // 产品点击饼图配置
+  const getProductPieChartOption = () => ({
+    title: {
+      text: `产品点击数据 (${productDateRange[0].format('MM-DD')} 至 ${productDateRange[1].format('MM-DD')})`,
+      left: 'center',
+      textStyle: {
+        color: '#1e293b',
+        fontSize: 18,
+        fontWeight: '600'
+      }
+    },
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(255, 255, 255, 0.98)',
+      borderColor: '#e2e8f0',
+      textStyle: {
+        color: '#1e293b'
+      },
+      formatter: '{a} <br/>{b}: {c} ({d}%)'
+    },
+    legend: {
+      orient: 'vertical',
+      left: 'left',
+      textStyle: {
+        color: '#64748b'
+      }
+    },
+    series: [
+      {
+        name: '产品类别',
+        type: 'pie',
+        radius: '50%',
+        data: productClickCounts,
+        itemStyle: {
+          borderRadius: 6,
+          borderColor: '#fff',
+          borderWidth: 2
+        },
+        label: {
+          show: true,
+          position: 'inside',
+          formatter: '{c}',
+          fontSize: 14,
+          color: '#ffffff',
+          fontWeight: '600'
+        },
+        labelLine: {
+          show: false
+        },
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.3)',
+          },
+        },
+        color: ['#8b5cf6', '#06b6d4', '#84cc16', '#f97316', '#ec4899']
+      },
+    ],
+  });
+
   const renderChart = () => {
     switch (chartType) {
       case 'bar-chart':
@@ -464,6 +658,83 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
               </Card>
             </Col>
             <Col xs={24} lg={12}>
+              <Card title="数字计数器控制" className="counter-control-card">
+                <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '20px' }}>
+                    <div style={{ textAlign: 'center', flex: 1 }}>
+                      <Text strong style={{ fontSize: '16px', color: '#1e293b' }}>
+                        当前数字值：
+                      </Text>
+                      <div style={{ 
+                        fontSize: '28px', 
+                        fontWeight: 'bold', 
+                        color: '#3b82f6',
+                        marginTop: '8px',
+                        minHeight: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {counterLoading ? <Spin size="small" /> : currentCount}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'center', flex: 1 }}>
+                      <Text strong style={{ fontSize: '16px', color: '#1e293b' }}>
+                        原始数字值：
+                      </Text>
+                      <div style={{ 
+                        fontSize: '28px', 
+                        fontWeight: 'bold', 
+                        color: '#10b981',
+                        marginTop: '8px',
+                        minHeight: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {originLoading ? <Spin size="small" /> : originCount}
+                      </div>
+                    </div>
+                  </div>
+                  <Space.Compact style={{ width: '100%' }}>
+                    <InputNumber
+                      style={{ flex: 1 }}
+                      placeholder="输入新的数字值"
+                      value={inputValue}
+                      onChange={setInputValue}
+                      min={0}
+                      precision={0}
+                      size="large"
+                    />
+                    <Button
+                      type="primary"
+                      size="large"
+                      loading={resetLoading}
+                      onClick={handleResetCounter}
+                      disabled={inputValue === null || inputValue === undefined}
+                      icon={<ReloadOutlined />}
+                    >
+                      确认重置
+                    </Button>
+                  </Space.Compact>
+                  <div style={{ textAlign: 'center' }}>
+                    <Button
+                      type="default"
+                      size="small"
+                      onClick={() => {
+                        fetchCurrentCount();
+                        fetchOriginCount();
+                      }}
+                      loading={counterLoading || originLoading}
+                      icon={<ReloadOutlined />}
+                    >
+                      刷新所有值
+                    </Button>
+                  </div>
+                </Space>
+              </Card>
+            </Col>
+            <Col xs={24} lg={12}>
               <Card 
                 title={
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -485,6 +756,29 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
               >
                 <Spin spinning={loading} tip="loading...">
                   <ReactECharts option={getPieChartOption()} style={{ height: '300px' }} />
+                </Spin>
+              </Card>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Card 
+                title={
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>产品点击数据</span>
+                    <RangePicker 
+                      onChange={handleProductDateRangeChange}
+                      value={productDateRange}
+                      placeholder={['开始日期', '结束日期']}
+                      allowClear={false}
+                      format="YYYY-MM-DD"
+                      size="small"
+                      style={{ width: 250 }}
+                    />
+                  </div>
+                } 
+                className="chart-container"
+              >
+                <Spin spinning={productLoading} tip="loading...">
+                  <ReactECharts option={getProductPieChartOption()} style={{ height: '300px' }} />
                 </Spin>
               </Card>
             </Col>

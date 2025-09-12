@@ -47,7 +47,6 @@ body {
 }
 
 .ant-layout-content {
-  padding: 24px;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   min-height: calc(100vh - 64px);

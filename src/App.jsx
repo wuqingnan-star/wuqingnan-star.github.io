@@ -53,7 +53,7 @@ function AppContent() {
         {
           key: 'wheel-click-data',
           icon: <ThunderboltOutlined />,
-          label: '转盘点击数据',
+          label: '转盘数据',
         },
       ],
     },
@@ -130,7 +130,7 @@ function AppContent() {
         <Content
           style={{
             margin: '16px',
-            padding: 24,
+            padding: 12,
             minHeight: 280,
             background: 'transparent',
             borderRadius: borderRadiusLG,

@@ -9,7 +9,7 @@ import {
   LineChartOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, HashRouter } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import WheelClickData from './components/WheelClickData';
 
@@ -152,9 +152,9 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
+    <HashRouter>
       <AppContent />
-    </Router>
+    </HashRouter>
   );
 }
 

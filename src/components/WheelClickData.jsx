@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Row,
   Col,
@@ -12,6 +12,7 @@ import {
   Button,
   Typography,
   Divider,
+  Select,
 } from "antd";
 import {
   UserOutlined,
@@ -44,9 +45,57 @@ const WheelClickData = () => {
   // 统计数据状态
   const [newUsersCount, setNewUsersCount] = useState(0);
   const [homePageShowCount, setHomePageShowCount] = useState(0); // 首页展示次数
+  const [mainSiteShowCount, setMainSiteShowCount] = useState(0); // 主站展示次数
   const [warmupPageShowCount, setWarmupPageShowCount] = useState(0); // 预热页展示次数
   const [totalShowCount, setTotalShowCount] = useState(0); // 总展示次数
   const [statisticsLoading, setStatisticsLoading] = useState(true);
+  const [statisticsTimeFilter, setStatisticsTimeFilter] = useState("day"); // 统计数据的日周月筛选
+  const [isMobile, setIsMobile] = useState(false); // 移动端检测状态
+  
+  // 图表实例引用
+  const chartRef1 = useRef(null);
+  const chartRef2 = useRef(null);
+
+  // 预设的日期范围选项
+  const dateRangeOptions = [
+    {
+      label: "最近7天",
+      value: "last7days",
+      dates: [dayjs().subtract(7, "day"), dayjs()]
+    },
+    {
+      label: "最近30天",
+      value: "last30days", 
+      dates: [dayjs().subtract(30, "day"), dayjs()]
+    },
+    {
+      label: "本月",
+      value: "thisMonth",
+      dates: [dayjs().startOf("month"), dayjs().endOf("month")]
+    },
+    {
+      label: "上月",
+      value: "lastMonth",
+      dates: [dayjs().subtract(1, "month").startOf("month"), dayjs().subtract(1, "month").endOf("month")]
+    }
+  ];
+
+  // 移动端检测
+  useEffect(() => {
+    const checkIsMobile = () => {
+      const newIsMobile = window.innerWidth < 768;
+      if (newIsMobile !== isMobile) {
+        setIsMobile(newIsMobile);
+        // 当移动端状态改变时，重新调整图表尺寸
+        resizeCharts();
+      }
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, [isMobile]);
 
   // API端点配置
   const GET_DAILY_CLICKS_ENDPOINT =
@@ -57,12 +106,8 @@ const WheelClickData = () => {
     "https://shopify.runmefitserver.com/api/collect/wheel-monthly-stats";
   const GET_DURATION_CLICKS_ENDPOINT =
     "https://shopify.runmefitserver.com/api/collect/wheel-duration-stats";
-  const GET_NEW_USERS_ENDPOINT =
-    "https://shopify.runmefitserver.com/api/collect/wheel-new-customer-count";
-  const GET_SHOW_COUNT_ENDPOINT =
-    "https://shopify.runmefitserver.com/api/collect/wheel-show-count";
-  const GET_TOTAL_SHOW_COUNT_ENDPOINT =
-    "https://shopify.runmefitserver.com/api/collect/wheel-total-show-count";
+  const GET_WHEEL_STATISTICS_ENDPOINT =
+    "https://shopify.runmefitserver.com/api/collect/wheel-statistics";
 
   
 
@@ -99,75 +144,92 @@ const WheelClickData = () => {
     setTimeFilter(value);
   };
 
+  // 处理统计数据时间筛选变化
+  const handleStatisticsTimeFilterChange = (value) => {
+    setStatisticsTimeFilter(value);
+  };
+
   // 处理产品饼图日期范围变化
   const handleProductDateRangeChange = (dates) => {
     setProductDateRange(dates);
   };
 
-  // 获取新增用户数
-  const fetchNewUsersCount = async () => {
-    try {
-      const response = await fetch(GET_NEW_USERS_ENDPOINT);
-      const data = await response.json();
-      // 假设接口返回格式为 { count: number } 或直接返回数字
-      const count = typeof data === 'number' ? data : (data.count || data);
-      setNewUsersCount(count);
-    } catch (error) {
-      console.error("Error fetching new users count:", error);
-      // 使用默认值
-      setNewUsersCount(11280);
+  // 处理移动端Select选择变化
+  const handleDateRangeSelectChange = (value) => {
+    const selectedOption = dateRangeOptions.find(option => option.value === value);
+    if (selectedOption) {
+      setProductDateRange(selectedOption.dates);
     }
   };
 
-  // 获取总展示次数
-  const fetchTotalShowCount = async () => {
-    try {
-      const response = await fetch(GET_TOTAL_SHOW_COUNT_ENDPOINT);
-      const data = await response.json();
-      
-      // 假设接口返回格式为 { count: number } 或直接返回数字
-      const count = typeof data === 'number' ? data : (data.count || data);
-      setTotalShowCount(count);
-    } catch (error) {
-      console.error("Error fetching total show count:", error);
-      // 使用默认值
-      setTotalShowCount(121739);
+  // 强制重新渲染图表
+  const resizeCharts = () => {
+    setTimeout(() => {
+      if (chartRef1.current) {
+        chartRef1.current.getEchartsInstance().resize();
+      }
+      if (chartRef2.current) {
+        chartRef2.current.getEchartsInstance().resize();
+      }
+    }, 100);
+  };
+
+  // 颜色映射函数
+  const getColorForButton = (buttonName) => {
+    const name = buttonName.toLowerCase();
+    
+    if (name.includes("launch") || name.includes("icon")) {
+      return "#3b82f6"; // 蓝色
+    } else if (name.includes("wheel-show")) {
+      return "#10b981"; // 绿色
+    } else if (name.includes("wheel-start")) {
+      return "#fa4d0a"; // 橙色
+    } else {
+      // 其他按钮使用默认颜色
+      return "#8b5cf6"; // 紫色
     }
   };
 
-  // 获取展示次数（首页和预热页）
-  const fetchShowCount = async () => {
+  // 为数据项添加颜色
+  const addColorsToData = (data) => {
+    return data.map(item => ({
+      ...item,
+      itemStyle: {
+        color: getColorForButton(item.name)
+      }
+    }));
+  };
+
+  // 获取统计数据（使用新的API）
+  const fetchStatisticsData = async () => {
     try {
-      const response = await fetch(GET_SHOW_COUNT_ENDPOINT);
+      const response = await fetch(`${GET_WHEEL_STATISTICS_ENDPOINT}?type=${statisticsTimeFilter}`);
       const data = await response.json();
       
-      // 处理数组格式的数据
-      if (Array.isArray(data)) {
-        // 根据 url 分类统计
-        let homePageCount = 0;
-        let warmupPageCount = 0;
-        
-        data.forEach(item => {
-          if (item.url === "/") {
-            homePageCount++;
-          } else if (item.url === "/pages/new-racer-series") {
-            warmupPageCount++;
-          }
-        });
-        
-        setHomePageShowCount(homePageCount);
-        setWarmupPageShowCount(warmupPageCount);
+      if (data.success && data.data) {
+        const stats = data.data;
+        setNewUsersCount(stats.new_users_count || 0);
+        setHomePageShowCount(stats.home_show_count || 0);
+        setMainSiteShowCount(stats.www_show_count || 0);
+        setWarmupPageShowCount(stats.campaign_show_count || 0);
+        setTotalShowCount(stats.total_show_count || 0);
       } else {
-        // 如果不是数组格式，使用默认值
-        console.warn("Show count data is not an array:", data);
-        setHomePageShowCount(8846);
-        setWarmupPageShowCount(112893);
+        console.warn("Statistics API returned unsuccessful response:", data);
+        // 使用默认值
+        setNewUsersCount(37);
+        setHomePageShowCount(6);
+        setMainSiteShowCount(0);
+        setWarmupPageShowCount(1);
+        setTotalShowCount(1041);
       }
     } catch (error) {
-      console.error("Error fetching show count:", error);
+      console.error("Error fetching statistics data:", error);
       // 使用默认值
-      setHomePageShowCount(8846);
-      setWarmupPageShowCount(112893);
+      setNewUsersCount(37);
+      setHomePageShowCount(6);
+      setMainSiteShowCount(0);
+      setWarmupPageShowCount(1);
+      setTotalShowCount(1041);
     }
   };
 
@@ -175,11 +237,7 @@ const WheelClickData = () => {
   const fetchStatistics = async () => {
     setStatisticsLoading(true);
     try {
-      await Promise.all([
-        fetchNewUsersCount(),
-        fetchShowCount(),
-        fetchTotalShowCount()
-      ]);
+      await fetchStatisticsData();
     } catch (error) {
       console.error("Error fetching statistics:", error);
     } finally {
@@ -237,6 +295,13 @@ const WheelClickData = () => {
       value: homePageShowCount,
       prefix: <RiseOutlined />,
       valueStyle: { color: "#10b981" },
+      loading: statisticsLoading,
+    },
+    {
+      title: "主站展示次数",
+      value: mainSiteShowCount,
+      prefix: <RiseOutlined />,
+      valueStyle: { color: "#8b5cf6" },
       loading: statisticsLoading,
     },
     {
@@ -311,6 +376,23 @@ const WheelClickData = () => {
     fetchStatistics();
   }, []);
 
+  // 当统计数据时间筛选变化时，重新获取统计数据
+  useEffect(() => {
+    fetchStatistics();
+  }, [statisticsTimeFilter]);
+
+  // 当数据加载完成后，重新调整图表尺寸
+  useEffect(() => {
+    if (!loading && !productLoading) {
+      resizeCharts();
+    }
+  }, [loading, productLoading]);
+
+  // 当移动端状态变化时，重新调整图表尺寸
+  useEffect(() => {
+    resizeCharts();
+  }, [isMobile]);
+
   // 饼图配置
   const getPieChartOption = () => ({
     title: {
@@ -344,7 +426,7 @@ const WheelClickData = () => {
         name: "类别",
         type: "pie",
         radius: "50%",
-        data: clickCounts,
+        data: addColorsToData(clickCounts),
         itemStyle: {
           borderRadius: 6,
           borderColor: "#fff",
@@ -368,7 +450,6 @@ const WheelClickData = () => {
             shadowColor: "rgba(0, 0, 0, 0.3)",
           },
         },
-        color: ["#3b82f6", "#10b981", "#fa4d0a", "#ef4444", "#8b5cf6"],
       },
     ],
   });
@@ -408,7 +489,7 @@ const WheelClickData = () => {
         name: "类别",
         type: "pie",
         radius: "50%",
-        data: productClickCounts,
+        data: addColorsToData(productClickCounts),
         itemStyle: {
           borderRadius: 6,
           borderColor: "#fff",
@@ -432,7 +513,6 @@ const WheelClickData = () => {
             shadowColor: "rgba(0, 0, 0, 0.3)",
           },
         },
-        color: ["#3b82f6", "#10b981", "#fa4d0a", "#ef4444", "#8b5cf6"],
       },
     ],
   });
@@ -452,32 +532,66 @@ const WheelClickData = () => {
           转盘数据分析
         </h1>
       </div>
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col span={24}>
+          <Card>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
+              <span style={{ fontSize: 16, fontWeight: 600 }}>统计数据筛选</span>
+              <Radio.Group
+                value={statisticsTimeFilter}
+                onChange={(e) => handleStatisticsTimeFilterChange(e.target.value)}
+                optionType="button"
+                buttonStyle="solid"
+                size="small"
+              >
+                <Radio.Button value="day">日</Radio.Button>
+                <Radio.Button value="week">周</Radio.Button>
+                <Radio.Button value="month">月</Radio.Button>
+              </Radio.Group>
+            </div>
+          </Card>
+        </Col>
+      </Row>
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8} xl={4}>
           <Card>
             <Spin spinning={statistics[0].loading} tip="加载中...">
               <Statistic {...statistics[0]} />
             </Spin>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8} xl={4}>
           <Card>
             <Spin spinning={statistics[1].loading} tip="加载中...">
               <Statistic {...statistics[1]} />
             </Spin>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8} xl={4}>
           <Card>
             <Spin spinning={statistics[2].loading} tip="加载中...">
               <Statistic {...statistics[2]} />
             </Spin>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8} xl={4}>
           <Card>
             <Spin spinning={statistics[3].loading} tip="加载中...">
               <Statistic {...statistics[3]} />
+            </Spin>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={8} xl={4}>
+          <Card>
+            <Spin spinning={statistics[4].loading} tip="加载中...">
+              <Statistic {...statistics[4]} />
             </Spin>
           </Card>
         </Col>
@@ -512,8 +626,15 @@ const WheelClickData = () => {
           >
             <Spin spinning={loading} tip="loading...">
               <ReactECharts
+                ref={chartRef1}
                 option={getPieChartOption()}
-                style={{ height: "400px" }}
+                style={{ height: "400px", width: "100%" }}
+                onChartReady={(chart) => {
+                  // 图表准备就绪后，确保正确尺寸
+                  setTimeout(() => {
+                    chart.resize();
+                  }, 100);
+                }}
               />
             </Spin>
           </Card>
@@ -526,26 +647,57 @@ const WheelClickData = () => {
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
+                  flexWrap: isMobile ? "wrap" : "nowrap",
+                  gap: isMobile ? "8px" : "0",
+                  paddingBottom: isMobile ? "8px" : "0",
                 }}
               >
-                <span>转盘数据</span>
-                <RangePicker
-                  onChange={handleProductDateRangeChange}
-                  value={productDateRange}
-                  placeholder={["开始日期", "结束日期"]}
-                  allowClear={false}
-                  format="YYYY-MM-DD"
-                  size="small"
-                  style={{ width: 250 }}
-                />
+                <span style={{ 
+                  fontSize: isMobile ? "14px" : "16px",
+                  fontWeight: 600,
+                  marginBottom: isMobile ? "8px" : "0",
+                  width: isMobile ? "100%" : "auto"
+                }}>
+                  转盘数据
+                </span>
+                {isMobile ? (
+                  <Select
+                    placeholder="选择时间范围"
+                    value={dateRangeOptions.find(option => 
+                      option.dates[0].format("YYYY-MM-DD") === productDateRange[0].format("YYYY-MM-DD") &&
+                      option.dates[1].format("YYYY-MM-DD") === productDateRange[1].format("YYYY-MM-DD")
+                    )?.value || "thisMonth"}
+                    onChange={handleDateRangeSelectChange}
+                    size="small"
+                    style={{ width: "100%" }}
+                    options={dateRangeOptions}
+                  />
+                ) : (
+                  <RangePicker
+                    onChange={handleProductDateRangeChange}
+                    value={productDateRange}
+                    placeholder={["开始日期", "结束日期"]}
+                    allowClear={false}
+                    format="YYYY-MM-DD"
+                    size="small"
+                    style={{ width: 250 }}
+                  />
+                )}
               </div>
             }
             className="chart-container"
           >
             <Spin spinning={productLoading} tip="loading...">
               <ReactECharts
+                ref={chartRef2}
                 option={getProductPieChartOption()}
-                style={{ height: "400px" }}
+                style={{ height: "400px", width: "100%" }}
+                onChartReady={(chart) => {
+                  // 图表准备就绪后，确保正确尺寸
+                  setTimeout(() => {
+                    chart.resize();
+                  }, 100);
+                }}
               />
             </Spin>
           </Card>

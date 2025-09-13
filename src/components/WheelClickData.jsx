@@ -61,6 +61,8 @@ const WheelClickData = () => {
     "https://shopify.runmefitserver.com/api/collect/wheel-new-customer-count";
   const GET_SHOW_COUNT_ENDPOINT =
     "https://shopify.runmefitserver.com/api/collect/wheel-show-count";
+  const GET_TOTAL_SHOW_COUNT_ENDPOINT =
+    "https://shopify.runmefitserver.com/api/collect/wheel-total-show-count";
 
   
 
@@ -117,7 +119,23 @@ const WheelClickData = () => {
     }
   };
 
-  // 获取展示次数
+  // 获取总展示次数
+  const fetchTotalShowCount = async () => {
+    try {
+      const response = await fetch(GET_TOTAL_SHOW_COUNT_ENDPOINT);
+      const data = await response.json();
+      
+      // 假设接口返回格式为 { count: number } 或直接返回数字
+      const count = typeof data === 'number' ? data : (data.count || data);
+      setTotalShowCount(count);
+    } catch (error) {
+      console.error("Error fetching total show count:", error);
+      // 使用默认值
+      setTotalShowCount(121739);
+    }
+  };
+
+  // 获取展示次数（首页和预热页）
   const fetchShowCount = async () => {
     try {
       const response = await fetch(GET_SHOW_COUNT_ENDPOINT);
@@ -125,9 +143,6 @@ const WheelClickData = () => {
       
       // 处理数组格式的数据
       if (Array.isArray(data)) {
-        // 计算总展示次数（数组长度）
-        setTotalShowCount(data.length);
-        
         // 根据 url 分类统计
         let homePageCount = 0;
         let warmupPageCount = 0;
@@ -147,14 +162,12 @@ const WheelClickData = () => {
         console.warn("Show count data is not an array:", data);
         setHomePageShowCount(8846);
         setWarmupPageShowCount(112893);
-        setTotalShowCount(121739);
       }
     } catch (error) {
       console.error("Error fetching show count:", error);
       // 使用默认值
       setHomePageShowCount(8846);
       setWarmupPageShowCount(112893);
-      setTotalShowCount(121739);
     }
   };
 
@@ -164,7 +177,8 @@ const WheelClickData = () => {
     try {
       await Promise.all([
         fetchNewUsersCount(),
-        fetchShowCount()
+        fetchShowCount(),
+        fetchTotalShowCount()
       ]);
     } catch (error) {
       console.error("Error fetching statistics:", error);

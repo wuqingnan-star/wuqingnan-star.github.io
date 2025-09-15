@@ -8,10 +8,17 @@ import {
   PieChartOutlined,
   LineChartOutlined,
   ThunderboltOutlined,
+  FormOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, HashRouter } from 'react-router-dom';
 import Dashboard from './components/Dashboard';
 import WheelClickData from './components/WheelClickData';
+import FormsList from './components/FormsList';
+import FormRenderer from './components/FormRenderer';
+import SubmissionsTable from './components/SubmissionsTable';
+import PermissionGuard from './components/PermissionGuard';
+import { canAccessFormManagement } from './utils/env';
 
 const { Header, Sider, Content } = Layout;
 
@@ -57,6 +64,19 @@ function AppContent() {
         },
       ],
     },
+    // 只在开发环境显示表单管理
+    ...(canAccessFormManagement() ? [{
+      key: 'forms',
+      icon: <FormOutlined />,
+      label: '表单管理',
+      children: [
+        {
+          key: 'forms-list',
+          icon: <FileTextOutlined />,
+          label: '表单列表',
+        },
+      ],
+    }] : []),
   ];
 
   const handleMenuClick = ({ key }) => {
@@ -70,6 +90,8 @@ function AppContent() {
       navigate('/line-chart');
     } else if (key === 'wheel-click-data') {
       navigate('/wheel-click-data');
+    } else if (key === 'forms-list') {
+      navigate('/forms');
     }
   };
 
@@ -81,6 +103,9 @@ function AppContent() {
     if (path === '/pie-chart') return 'pie-chart';
     if (path === '/line-chart') return 'line-chart';
     if (path === '/wheel-click-data') return 'wheel-click-data';
+    if (path === '/forms') return 'forms-list';
+    if (path.startsWith('/form/')) return 'forms-list';
+    if (path.startsWith('/admin/forms/')) return 'forms-list';
     return 'dashboard';
   };
 
@@ -143,6 +168,21 @@ function AppContent() {
             <Route path="/pie-chart" element={<Dashboard chartType="pie-chart" />} />
             <Route path="/line-chart" element={<Dashboard chartType="line-chart" />} />
             <Route path="/wheel-click-data" element={<WheelClickData />} />
+            <Route path="/forms" element={
+              <PermissionGuard>
+                <FormsList />
+              </PermissionGuard>
+            } />
+            <Route path="/form/:formId" element={
+              <PermissionGuard>
+                <FormRenderer />
+              </PermissionGuard>
+            } />
+            <Route path="/admin/forms/:formId/submissions" element={
+              <PermissionGuard>
+                <SubmissionsTable />
+              </PermissionGuard>
+            } />
           </Routes>
         </Content>
       </Layout>

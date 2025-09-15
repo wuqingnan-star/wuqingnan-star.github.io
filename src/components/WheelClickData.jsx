@@ -27,6 +27,7 @@ import {
 import ReactECharts from "echarts-for-react";
 import * as echarts from "echarts";
 import dayjs from "dayjs";
+import { wheelApi } from "../api";
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
@@ -97,31 +98,17 @@ const WheelClickData = () => {
     return () => window.removeEventListener('resize', checkIsMobile);
   }, [isMobile]);
 
-  // API端点配置
-  const GET_DAILY_CLICKS_ENDPOINT =
-    "https://shopify.runmefitserver.com/api/collect/wheel-daily-stats";
-  const GET_WEEKLY_CLICKS_ENDPOINT =
-    "https://shopify.runmefitserver.com/api/collect/wheel-weekly-stats";
-  const GET_MONTHLY_CLICKS_ENDPOINT =
-    "https://shopify.runmefitserver.com/api/collect/wheel-monthly-stats";
-  const GET_DURATION_CLICKS_ENDPOINT =
-    "https://shopify.runmefitserver.com/api/collect/wheel-duration-stats";
-  const GET_WHEEL_STATISTICS_ENDPOINT =
-    "https://shopify.runmefitserver.com/api/collect/wheel-statistics";
-
-  
-
-  // 根据时间筛选获取对应的API端点
-  const getEndpointByTimeFilter = (filter) => {
+  // 根据时间筛选获取对应的API方法
+  const getApiMethodByTimeFilter = (filter) => {
     switch (filter) {
       case "daily":
-        return GET_DAILY_CLICKS_ENDPOINT;
+        return wheelApi.getDailyStats;
       case "weekly":
-        return GET_WEEKLY_CLICKS_ENDPOINT;
+        return wheelApi.getWeeklyStats;
       case "monthly":
-        return GET_MONTHLY_CLICKS_ENDPOINT;
+        return wheelApi.getMonthlyStats;
       default:
-        return GET_DAILY_CLICKS_ENDPOINT;
+        return wheelApi.getDailyStats;
     }
   };
 
@@ -203,8 +190,7 @@ const WheelClickData = () => {
   // 获取统计数据（使用新的API）
   const fetchStatisticsData = async () => {
     try {
-      const response = await fetch(`${GET_WHEEL_STATISTICS_ENDPOINT}?type=${statisticsTimeFilter}`);
-      const data = await response.json();
+      const data = await wheelApi.getStatistics(statisticsTimeFilter);
       
       if (data.success && data.data) {
         const stats = data.data;
@@ -249,17 +235,15 @@ const WheelClickData = () => {
   const fetchProductClickData = async () => {
     setProductLoading(true);
     try {
-      let endpoint = GET_DURATION_CLICKS_ENDPOINT;
-      let params = new URLSearchParams();
+      let startDate = null;
+      let endDate = null;
 
       if (productDateRange && productDateRange.length === 2) {
-        params.append("startDate", productDateRange[0].format("YYYY-MM-DD"));
-        params.append("endDate", productDateRange[1].format("YYYY-MM-DD"));
-        endpoint += `?${params.toString()}`;
+        startDate = productDateRange[0].format("YYYY-MM-DD");
+        endDate = productDateRange[1].format("YYYY-MM-DD");
       }
 
-      const response = await fetch(endpoint);
-      const data = await response.json();
+      const data = await wheelApi.getDurationStats(startDate, endDate);
 
       // 处理产品点击数据
       const productClicks = Object.entries(data).map(([product, count]) => ({
@@ -322,10 +306,9 @@ const WheelClickData = () => {
 
   useEffect(() => {
     setLoading(true);
-    const endpoint = getEndpointByTimeFilter(timeFilter);
+    const apiMethod = getApiMethodByTimeFilter(timeFilter);
 
-    fetch(endpoint)
-      .then((response) => response.json())
+    apiMethod()
       .then((data) => {
         console.log("data-----------------------", data);
         // 处理新的数据格式 {"add-to-cart":2,"buy-now":1}

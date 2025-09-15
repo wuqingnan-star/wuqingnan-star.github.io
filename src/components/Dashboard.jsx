@@ -4,6 +4,7 @@ import { UserOutlined, ShoppingCartOutlined, DollarOutlined, RiseOutlined, Reloa
 import ReactECharts from 'echarts-for-react';
 import * as echarts from 'echarts';
 import dayjs from 'dayjs';
+import { dashboardApi } from '../api';
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
@@ -27,28 +28,17 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
   const [originLoading, setOriginLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   
-  // API端点配置
-  const GET_CLICK_COUNTS_ENDPOINT = "https://collect-vital-data.onrender.com/api/click-counts"
-  const GET_DAILY_CLICKS_ENDPOINT = "https://collect-vital-data.onrender.com/api/daily-clicks"
-  const GET_WEEKLY_CLICKS_ENDPOINT = "https://collect-vital-data.onrender.com/api/weekly-clicks"
-  const GET_MONTHLY_CLICKS_ENDPOINT = "https://collect-vital-data.onrender.com/api/monthly-clicks"
-  const GET_DURATION_CLICKS_ENDPOINT = "https://collect-vital-data.onrender.com/api/duration-clicks"
-  const GET_CURRENT_COUNT_ENDPOINT = "https://collect-vital-data.onrender.com/api/current-count"
-  const GET_ORIGIN_COUNT_ENDPOINT = "https://collect-vital-data.onrender.com/api/origin-count"
-  const RESET_COUNTER_ENDPOINT = "https://collect-vital-data.onrender.com/api/reset-counter"
-
-
-  // 根据时间筛选获取对应的API端点
-  const getEndpointByTimeFilter = (filter) => {
+  // 根据时间筛选获取对应的API方法
+  const getApiMethodByTimeFilter = (filter) => {
     switch (filter) {
       case 'daily':
-        return GET_DAILY_CLICKS_ENDPOINT;
+        return dashboardApi.getDailyClicks;
       case 'weekly':
-        return GET_WEEKLY_CLICKS_ENDPOINT;
+        return dashboardApi.getWeeklyClicks;
       case 'monthly':
-        return GET_MONTHLY_CLICKS_ENDPOINT;
+        return dashboardApi.getMonthlyClicks;
       default:
-        return GET_DAILY_CLICKS_ENDPOINT;
+        return dashboardApi.getDailyClicks;
     }
   };
 
@@ -81,8 +71,7 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
   const fetchCurrentCount = async () => {
     setCounterLoading(true);
     try {
-      const response = await fetch(GET_CURRENT_COUNT_ENDPOINT);
-      const count = await response.json();
+      const count = await dashboardApi.getCurrentCount();
       setCurrentCount(count);
     } catch (error) {
       console.error('Error fetching current count:', error);
@@ -95,8 +84,7 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
   const fetchOriginCount = async () => {
     setOriginLoading(true);
     try {
-      const response = await fetch(GET_ORIGIN_COUNT_ENDPOINT);
-      const data = await response.json();
+      const data = await dashboardApi.getOriginCount();
       setOriginCount(data[0].count_start);
     } catch (error) {
       console.error('Error fetching origin count:', error);
@@ -113,19 +101,10 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
     
     setResetLoading(true);
     try {
-      const response = await fetch(RESET_COUNTER_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ newValue: inputValue }),
-      });
-      
-      if (response.ok) {
-        // 重置成功后更新当前数字
-        setCurrentCount(inputValue);
-        setInputValue(null);
-      }
+      await dashboardApi.resetCounter(inputValue);
+      // 重置成功后更新当前数字
+      setCurrentCount(inputValue);
+      setInputValue(null);
     } catch (error) {
       console.error('Error resetting counter:', error);
     } finally {
@@ -137,17 +116,15 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
   const fetchProductClickData = async () => {
     setProductLoading(true);
     try {
-      let endpoint = GET_DURATION_CLICKS_ENDPOINT;
-      let params = new URLSearchParams();
+      let startDate = null;
+      let endDate = null;
       
       if (productDateRange && productDateRange.length === 2) {
-        params.append('startDate', productDateRange[0].format('YYYY-MM-DD'));
-        params.append('endDate', productDateRange[1].format('YYYY-MM-DD'));
-        endpoint += `?${params.toString()}`;
+        startDate = productDateRange[0].format('YYYY-MM-DD');
+        endDate = productDateRange[1].format('YYYY-MM-DD');
       }
       
-      const response = await fetch(endpoint);
-      const data = await response.json();
+      const data = await dashboardApi.getDurationClicks(startDate, endDate);
       
       // 处理产品点击数据
       const productClicks = Object.entries(data).map(([product, count]) => ({
@@ -172,10 +149,9 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
 
   useEffect(() => {
     setLoading(true);
-    const endpoint = getEndpointByTimeFilter(timeFilter);
+    const apiMethod = getApiMethodByTimeFilter(timeFilter);
     
-    fetch(endpoint)
-      .then(response => response.json())
+    apiMethod()
       .then(data => {
         // 处理新的数据格式 {"add-to-cart":2,"buy-now":1}
         const clickCounts = Object.entries(data).map(([button, count]) => ({

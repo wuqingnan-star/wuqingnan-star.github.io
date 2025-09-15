@@ -1,7 +1,9 @@
 import apiClient from './config.js';
 
 // 表单API基础URL
-const FORM_BASE_URL = 'http://localhost:3000/api/form';
+// const FORM_BASE_URL = 'http://localhost:3000/api/form';
+const FORM_BASE_URL = 'https://shopify.runmefitserver.com/api/form';
+
 
 // 表单相关API接口
 export const formApi = {

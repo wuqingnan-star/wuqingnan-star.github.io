@@ -12,7 +12,6 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // 在发送请求之前做些什么
-    console.log('发送请求:', config.url);
     return config;
   },
   (error) => {

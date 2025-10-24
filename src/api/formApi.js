@@ -1,7 +1,6 @@
 import apiClient from './config.js';
 
 // 表单API基础URL
-// const FORM_BASE_URL = 'http://localhost:3000/api/form';
 const FORM_BASE_URL = 'https://shopify.runmefitserver.com/api/form';
 
 
@@ -56,9 +55,21 @@ export const formApi = {
   },
 
   // 获取表单提交记录
-  getFormSubmissions: async (formId) => {
+  getFormSubmissions: async (formId, page = 1, limit = 10) => {
     const response = await apiClient.get(`${FORM_BASE_URL}/get-form-submissions`, {
-      params: { form_id: formId }
+      params: { 
+        form_id: formId,
+        page: page,
+        limit: limit
+      }
+    });
+    return response.data;
+  },
+
+  // 获取表单统计数据
+  getFormStats: async (formUuid) => {
+    const response = await apiClient.get(`${FORM_BASE_URL}/get-form-stats`, {
+      params: { form_uuid: formUuid }
     });
     return response.data;
   }

@@ -100,7 +100,7 @@ export default function FormEditor({ open, onClose, formData }) {
       </Form>
 
       <div style={{marginTop:12}}>
-        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+        <div style={{display:'flex', marginBottom:12, justifyContent:'space-between', alignItems:'center'}}>
           <h4>字段</h4>
           <div>
             <Button onClick={addField}>添加字段</Button>

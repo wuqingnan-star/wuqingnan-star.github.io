@@ -26,7 +26,7 @@ export default function SubmissionsTable() {
     const otherChars = str.length - chineseChars;
     const estimated = chineseChars * 16 + otherChars * 6 + 58;
     // const value = Math.max(120, Math.min(estimated, 380));
-    const value = estimated
+    const value = Math.max(estimated, 220)
     return value;
   };
   

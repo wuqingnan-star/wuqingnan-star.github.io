@@ -1,6 +1,6 @@
 // SubmissionsTable.jsx (关键片段)
 import React, { useEffect, useState } from "react";
-import { Table, Button, Card, Typography, Radio, Row, Col, Spin } from "antd";
+import { Table, Button, Card, Typography, Radio, Row, Col, Spin, Tooltip } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { formApi } from "../api";
@@ -182,19 +182,22 @@ export default function SubmissionsTable() {
           title: "提交时间",
           dataIndex: "created_at",
           key: "created_at",
-          render: (time) => (
-            <div>
-              <div
-                style={{ fontSize: "12px", color: "#9ca3af", marginTop: "2px" }}
-              >
-                {toShanghaiTime(time, "YYYY-MM-DD HH:mm:ss")}
-              </div>
-            </div>
-          ),
+          render: (time) => {
+            const timeStr = toShanghaiTime(time, "YYYY-MM-DD HH:mm:ss");
+            return (
+              <Tooltip title={timeStr} placement="topLeft">
+                <div style={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: "12px", color: "#9ca3af", marginTop: "2px" }}>
+                    {timeStr}
+                  </div>
+                </div>
+              </Tooltip>
+            );
+          },
           sorter: (a, b) => new Date(a.created_at) - new Date(b.created_at),
           defaultSortOrder: "descend",
           // 响应式配置
-          width: 130,
+          width: 180,
           fixed: "left", // 固定在最左侧
         },
         ...sortedFields.map((f, index) => {
@@ -203,13 +206,26 @@ export default function SubmissionsTable() {
             key: f.field_key,
             render: (row) => {
               const v = row.values?.[f.field_key];
-              if (Array.isArray(v)) return v.join(", ");
-              return v ?? "";
+              const displayValue = Array.isArray(v) ? v.join(", ") : (v ?? "");
+              return (
+                <Tooltip title={displayValue} placement="topLeft">
+                  <div 
+                    style={{ 
+                      maxWidth: 250, 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis', 
+                      whiteSpace: 'nowrap' 
+                    }}
+                  >
+                    {displayValue}
+                  </div>
+                </Tooltip>
+              );
             },
             ellipsis: {
-              showTitle: true,
+              showTitle: false, // 使用自定义的title属性
             },
-            width: 150, // 设置固定宽度，避免列过宽
+            width: 200, // 设置固定宽度，避免列过宽
           };
         }),
       ];

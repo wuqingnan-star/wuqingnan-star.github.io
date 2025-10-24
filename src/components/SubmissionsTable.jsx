@@ -18,6 +18,18 @@ export default function SubmissionsTable() {
   const [chartLoading, setChartLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   
+  // 根据标题估算列宽，控制最小/最大宽度，确保省略号效果
+  const calcColumnWidth = (text) => {
+    const str = String(text || "");
+    // 中文字符按16px计算，英文按8px计算，加上padding
+    const chineseChars = (str.match(/[\u4e00-\u9fa5]/g) || []).length;
+    const otherChars = str.length - chineseChars;
+    const estimated = chineseChars * 16 + otherChars * 6 + 58;
+    // const value = Math.max(120, Math.min(estimated, 380));
+    const value = estimated
+    return value;
+  };
+  
   // 分页状态
   const [pagination, setPagination] = useState({
     current: 1,
@@ -182,28 +194,23 @@ export default function SubmissionsTable() {
           title: "提交时间",
           dataIndex: "created_at",
           key: "created_at",
+          width: 150,
+          fixed: "left", // 固定在最左侧
           render: (time) => {
             const timeStr = toShanghaiTime(time, "YYYY-MM-DD HH:mm:ss");
             return (
-              <Tooltip title={timeStr} placement="topLeft">
-                <div style={{ maxWidth: 250, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  <div style={{ fontSize: "12px", color: "#9ca3af", marginTop: "2px" }}>
-                    {timeStr}
-                  </div>
-                </div>
-              </Tooltip>
+                <span>{timeStr}</span>
             );
           },
           sorter: (a, b) => new Date(a.created_at) - new Date(b.created_at),
           defaultSortOrder: "descend",
-          // 响应式配置
-          width: 180,
-          fixed: "left", // 固定在最左侧
         },
         ...sortedFields.map((f, index) => {
+          const columnWidth = calcColumnWidth(f.label || f.field_key);
           return {
             title: f.label || f.field_key,
             key: f.field_key,
+            width: columnWidth,
             render: (row) => {
               const v = row.values?.[f.field_key];
               const displayValue = Array.isArray(v) ? v.join(", ") : (v ?? "");
@@ -211,7 +218,7 @@ export default function SubmissionsTable() {
                 <Tooltip title={displayValue} placement="topLeft">
                   <div 
                     style={{ 
-                      maxWidth: 250, 
+                      maxWidth: columnWidth, 
                       overflow: 'hidden', 
                       textOverflow: 'ellipsis', 
                       whiteSpace: 'nowrap' 
@@ -222,10 +229,6 @@ export default function SubmissionsTable() {
                 </Tooltip>
               );
             },
-            ellipsis: {
-              showTitle: false, // 使用自定义的title属性
-            },
-            width: 200, // 设置固定宽度，避免列过宽
           };
         }),
       ];
@@ -251,6 +254,7 @@ export default function SubmissionsTable() {
   return (
     <div>
       <Card
+        styles={{ body: { display: 'none'}}}
         title={
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <Button
@@ -268,9 +272,6 @@ export default function SubmissionsTable() {
         }
         style={{ marginBottom: 16 }}
       >
-        <div style={{ color: "#666", fontSize: "14px" }}>
-          共 {pagination.total} 条提交记录
-        </div>
       </Card>
       <Radio.Group
         value={typeFilter}
@@ -293,9 +294,10 @@ export default function SubmissionsTable() {
             loading={loading}
             scroll={{
               x: "max-content", // 水平滚动
-              y: 400, // 垂直滚动，固定高度
+              y: 500, // 垂直滚动，固定高度
             }}
-            size="small" // 紧凑模式，节省空间
+            tableLayout="fixed"
+            size="middle"
             onChange={handleTableChange}
             pagination={pagination}
           />

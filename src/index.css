@@ -197,11 +197,6 @@ body {
   transition: all 0.3s ease;
 }
 
-.ant-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12) !important;
-  border-color: #e2e8f0 !important;
-}
 
 /* 美化统计数字 */
 .ant-statistic-content {

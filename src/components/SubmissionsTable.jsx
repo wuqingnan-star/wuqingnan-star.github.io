@@ -6,6 +6,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { formApi } from "../api";
 import { toShanghaiTime } from "../utils";
 import ReactECharts from 'echarts-for-react';
+import { useDragScroll } from "../hooks/useDragScroll";
 
 export default function SubmissionsTable() {
   const { formId } = useParams();
@@ -17,6 +18,13 @@ export default function SubmissionsTable() {
   const [chartData, setChartData] = useState([]);
   const [chartLoading, setChartLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // 使用拖拽滚动Hook
+  const { containerRef, bindEvents } = useDragScroll({
+    enabled: true,
+    sensitivity: 1.2,
+    preventDefault: true
+  });
   
   // 根据标题估算列宽，控制最小/最大宽度，确保省略号效果
   const calcColumnWidth = (text) => {
@@ -144,6 +152,12 @@ export default function SubmissionsTable() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // 绑定拖拽滚动事件
+  useEffect(() => {
+    const cleanup = bindEvents();
+    return cleanup;
+  }, [bindEvents]);
 
   // 监听视图切换，切换到图表时获取数据
   useEffect(() => {
@@ -287,20 +301,22 @@ export default function SubmissionsTable() {
 
       <Card>
         {typeFilter === 'table' ? (
-          <Table
-            dataSource={submissions}
-            columns={columns}
-            rowKey="id"
-            loading={loading}
-            scroll={{
-              x: "max-content", // 水平滚动
-              y: 500, // 垂直滚动，固定高度
-            }}
-            tableLayout="fixed"
-            size="middle"
-            onChange={handleTableChange}
-            pagination={pagination}
-          />
+          <div ref={containerRef}>
+            <Table
+              dataSource={submissions}
+              columns={columns}
+              rowKey="id"
+              loading={loading}
+              scroll={{
+                x: "max-content", // 水平滚动
+                y: 500, // 垂直滚动，固定高度
+              }}
+              tableLayout="fixed"
+              size="middle"
+              onChange={handleTableChange}
+              pagination={pagination}
+            />
+          </div>
         ) : (
           <Spin spinning={chartLoading}>
             {Object.keys(groupedChartData).length > 0 ? (

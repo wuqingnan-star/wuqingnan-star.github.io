@@ -1,35 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, Space, Spin, Radio, DatePicker, InputNumber, Button, Typography } from 'antd';
+import type { Dayjs } from 'dayjs';
 import { UserOutlined, ShoppingCartOutlined, DollarOutlined, RiseOutlined, ReloadOutlined } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import * as echarts from 'echarts';
 import dayjs from 'dayjs';
 import { dashboardApi } from '../api';
+import type { EChartsOption } from 'echarts';
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
 
-const Dashboard = ({ chartType = 'dashboard' }) => {
-  const [clickCounts, setClickCounts] = useState([]);
-  const [productClickCounts, setProductClickCounts] = useState([]);
+interface DashboardProps {
+  chartType?: 'dashboard' | 'bar-chart' | 'pie-chart' | 'line-chart';
+}
+
+interface ClickCountItem {
+  name: string;
+  value: number;
+}
+
+const Dashboard = ({ chartType = 'dashboard' }: DashboardProps) => {
+  const [clickCounts, setClickCounts] = useState<ClickCountItem[]>([]);
+  const [productClickCounts, setProductClickCounts] = useState<ClickCountItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [productLoading, setProductLoading] = useState(true);
-  const [timeFilter, setTimeFilter] = useState('daily'); // 时间筛选状态，默认为日
-  const [productDateRange, setProductDateRange] = useState([
+  const [timeFilter, setTimeFilter] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [productDateRange, setProductDateRange] = useState<[Dayjs, Dayjs]>([
     dayjs().startOf('month'),
     dayjs().endOf('month')
-  ]); // 产品饼图的日期范围筛选，默认本月
+  ]);
   
   // 计数器相关状态
-  const [currentCount, setCurrentCount] = useState(0);
-  const [originCount, setOriginCount] = useState(0);
-  const [inputValue, setInputValue] = useState(null);
+  const [currentCount, setCurrentCount] = useState<number>(0);
+  const [originCount, setOriginCount] = useState<number>(0);
+  const [inputValue, setInputValue] = useState<number | null>(null);
   const [counterLoading, setCounterLoading] = useState(false);
   const [originLoading, setOriginLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   
   // 根据时间筛选获取对应的API方法
-  const getApiMethodByTimeFilter = (filter) => {
+  const getApiMethodByTimeFilter = (filter: 'daily' | 'weekly' | 'monthly') => {
     switch (filter) {
       case 'daily':
         return dashboardApi.getDailyClicks;
@@ -43,7 +54,7 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
   };
 
   // 获取时间筛选的显示文本
-  const getTimeFilterText = (filter) => {
+  const getTimeFilterText = (filter: 'daily' | 'weekly' | 'monthly'): string => {
     switch (filter) {
       case 'daily':
         return '日';
@@ -58,20 +69,22 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
 
 
   // 处理时间筛选变化
-  const handleTimeFilterChange = (value) => {
+  const handleTimeFilterChange = (value: 'daily' | 'weekly' | 'monthly') => {
     setTimeFilter(value);
   };
 
   // 处理产品饼图日期范围变化
-  const handleProductDateRangeChange = (dates) => {
-    setProductDateRange(dates);
+  const handleProductDateRangeChange = (dates: [Dayjs | null, Dayjs | null] | null) => {
+    if (dates && dates[0] && dates[1]) {
+      setProductDateRange([dates[0], dates[1]]);
+    }
   };
 
   // 获取当前数字
   const fetchCurrentCount = async () => {
     setCounterLoading(true);
     try {
-      const count = await dashboardApi.getCurrentCount();
+      const count = await dashboardApi.getCurrentCount() as unknown as number;
       setCurrentCount(count);
     } catch (error) {
       console.error('Error fetching current count:', error);
@@ -84,8 +97,8 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
   const fetchOriginCount = async () => {
     setOriginLoading(true);
     try {
-      const data = await dashboardApi.getOriginCount();
-      setOriginCount(data[0].count_start);
+      const data: any = await dashboardApi.getOriginCount();
+      setOriginCount(data[0]?.count_start || 0);
     } catch (error) {
       console.error('Error fetching origin count:', error);
     } finally {
@@ -124,10 +137,10 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
         endDate = productDateRange[1].format('YYYY-MM-DD');
       }
       
-      const data = await dashboardApi.getDurationClicks(startDate, endDate);
+      const data = await dashboardApi.getDurationClicks(startDate, endDate) as unknown as Record<string, number>;
       
       // 处理产品点击数据
-      const productClicks = Object.entries(data).map(([product, count]) => ({
+      const productClicks: ClickCountItem[] = Object.entries(data).map(([product, count]) => ({
         name: product,
         value: count
       }));
@@ -152,9 +165,10 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
     const apiMethod = getApiMethodByTimeFilter(timeFilter);
     
     apiMethod()
-      .then(data => {
+      .then((data) => {
+        const responseData = data as unknown as Record<string, number>;
         // 处理新的数据格式 {"add-to-cart":2,"buy-now":1}
-        const clickCounts = Object.entries(data).map(([button, count]) => ({
+        const clickCounts: ClickCountItem[] = Object.entries(responseData).map(([button, count]) => ({
           name: button,
           value: count
         }));
@@ -208,14 +222,14 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
   ];
 
   // 柱状图配置
-  const getBarChartOption = () => ({
+  const getBarChartOption = (): EChartsOption => ({
     title: {
       text: '月度销售数据',
       left: 'center',
       textStyle: {
         color: '#1e293b',
         fontSize: 18,
-        fontWeight: '600'
+        fontWeight: 600
       }
     },
     tooltip: {
@@ -284,14 +298,14 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
   });
 
   // 饼图配置
-  const getPieChartOption = () => ({
+  const getPieChartOption = (): EChartsOption => ({
     title: {
       text: `点击数据 (${getTimeFilterText(timeFilter)})`,
       left: 'center',
       textStyle: {
         color: '#1e293b',
         fontSize: 18,
-        fontWeight: '600'
+        fontWeight: 600
       }
     },
     tooltip: {
@@ -327,7 +341,7 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
           formatter: '{c}',
           fontSize: 14,
           color: '#ffffff',
-          fontWeight: '600'
+          fontWeight: 600
         },
         labelLine: {
           show: false
@@ -345,14 +359,14 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
   });
 
   // 折线图配置
-  const getLineChartOption = () => ({
+  const getLineChartOption = (): EChartsOption => ({
     title: {
       text: '用户增长趋势',
       left: 'center',
       textStyle: {
         color: '#1e293b',
         fontSize: 18,
-        fontWeight: '600'
+        fontWeight: 600
       }
     },
     tooltip: {
@@ -444,14 +458,14 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
   });
 
   // 仪表盘配置
-  const getGaugeChartOption = () => ({
+  const getGaugeChartOption = (): EChartsOption => ({
     title: {
       text: '系统性能指标',
       left: 'center',
       textStyle: {
         color: '#1e293b',
         fontSize: 18,
-        fontWeight: '600'
+        fontWeight: 600
       }
     },
     series: [
@@ -518,14 +532,14 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
   });
 
   // 产品点击饼图配置
-  const getProductPieChartOption = () => ({
+  const getProductPieChartOption = (): EChartsOption => ({
     title: {
       text: `产品点击数据 (${productDateRange[0].format('MM-DD')} 至 ${productDateRange[1].format('MM-DD')})`,
       left: 'center',
       textStyle: {
         color: '#1e293b',
         fontSize: 18,
-        fontWeight: '600'
+        fontWeight: 600
       }
     },
     tooltip: {
@@ -561,7 +575,7 @@ const Dashboard = ({ chartType = 'dashboard' }) => {
           formatter: '{c}',
           fontSize: 14,
           color: '#ffffff',
-          fontWeight: '600'
+          fontWeight: 600
         },
         labelLine: {
           show: false

@@ -1,4 +1,4 @@
-import apiClient from './config.js';
+import apiClient from './config';
 
 // 转盘数据API基础URL
 const WHEEL_BASE_URL = 'https://shopify.runmefitserver.com/api/collect';
@@ -23,7 +23,7 @@ export const wheelApi = {
   },
 
   // 获取时间段统计数据
-  getDurationStats: (startDate, endDate) => {
+  getDurationStats: (startDate?: string | null, endDate?: string | null) => {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
@@ -36,7 +36,7 @@ export const wheelApi = {
   },
 
   // 获取统计数据（新增的API）
-  getStatistics: (type = 'day') => {
+  getStatistics: (type: string = 'day') => {
     return apiClient.get(`${WHEEL_BASE_URL}/wheel-statistics?type=${type}`);
   },
 };

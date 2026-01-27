@@ -1,28 +1,43 @@
-// FormRenderer.jsx
 import React, { useEffect, useState } from 'react';
 import { Form, Input, Select, Radio, Checkbox, Button, message } from 'antd';
 import { useParams } from 'react-router-dom';
 import { formApi } from '../api';
 
+interface FormField {
+  field_key: string;
+  label: string;
+  type: string;
+  options?: string[];
+  required?: boolean;
+}
+
+interface FormMeta {
+  title: string;
+  description?: string;
+  fields: FormField[];
+}
+
 export default function FormRenderer() {
-  const { formId } = useParams();
+  const { formId } = useParams<{ formId: string }>();
   const [form] = Form.useForm();
-  const [meta, setMeta] = useState(null);
+  const [meta, setMeta] = useState<FormMeta | null>(null);
 
   useEffect(() => {
-    formApi.getForm(formId).then(d => {
+    if (!formId) return;
+    formApi.getForm(formId).then((d: any) => {
       setMeta(d);
     });
   }, [formId]);
 
   if (!meta) return <div>加载中...</div>;
 
-  const onFinish = async (values) => {
+  const onFinish = async (values: Record<string, any>) => {
+    if (!formId) return;
     try {
       await formApi.submitForm(formId, values);
       message.success('提交成功');
       form.resetFields();
-    } catch (err) {
+    } catch (err: any) {
       message.error(err?.response?.data?.error || err.message || '提交失败');
     }
   };

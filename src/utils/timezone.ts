@@ -1,4 +1,4 @@
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -16,7 +16,7 @@ dayjs.locale('zh-cn');
  * @param {string} format - 输出格式，默认为 'YYYY-MM-DD HH:mm:ss'
  * @returns {string} 转换后的时间字符串
  */
-export const toShanghaiTime = (time, format = 'YYYY-MM-DD HH:mm:ss') => {
+export const toShanghaiTime = (time: string | Date | Dayjs | null | undefined, format: string = 'YYYY-MM-DD HH:mm:ss'): string => {
   if (!time) return '-';
   
   try {
@@ -32,7 +32,7 @@ export const toShanghaiTime = (time, format = 'YYYY-MM-DD HH:mm:ss') => {
  * @param {string|Date|dayjs.Dayjs} time - 要转换的时间
  * @returns {string} 相对时间字符串
  */
-export const getRelativeTime = (time) => {
+export const getRelativeTime = (time: string | Date | Dayjs | null | undefined): string => {
   if (!time) return '-';
   
   try {
@@ -49,7 +49,7 @@ export const getRelativeTime = (time) => {
  * @param {string} format - 输出格式，默认为 'YYYY-MM-DD HH:mm:ss'
  * @returns {object} 包含格式化时间和相对时间的对象
  */
-export const formatTimeDisplay = (time, format = 'YYYY-MM-DD HH:mm:ss') => {
+export const formatTimeDisplay = (time: string | Date | Dayjs | null | undefined, format: string = 'YYYY-MM-DD HH:mm:ss'): { formatted: string; relative: string } => {
   if (!time) return { formatted: '-', relative: '-' };
   
   try {
@@ -69,7 +69,7 @@ export const formatTimeDisplay = (time, format = 'YYYY-MM-DD HH:mm:ss') => {
  * @param {string|Date|dayjs.Dayjs} time - 要检查的时间
  * @returns {boolean} 是否为今天
  */
-export const isToday = (time) => {
+export const isToday = (time: string | Date | Dayjs | null | undefined): boolean => {
   if (!time) return false;
   
   try {
@@ -87,7 +87,7 @@ export const isToday = (time) => {
  * @param {string|Date|dayjs.Dayjs} time - 要检查的时间
  * @returns {boolean} 是否为昨天
  */
-export const isYesterday = (time) => {
+export const isYesterday = (time: string | Date | Dayjs | null | undefined): boolean => {
   if (!time) return false;
   
   try {
@@ -105,7 +105,7 @@ export const isYesterday = (time) => {
  * @param {string|Date|dayjs.Dayjs} time - 要转换的时间
  * @returns {string} 智能格式化的时间字符串
  */
-export const getSmartTimeDisplay = (time) => {
+export const getSmartTimeDisplay = (time: string | Date | Dayjs | null | undefined): string => {
   if (!time) return '-';
   
   try {

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 // 创建axios实例
 const apiClient = axios.create({
@@ -10,11 +10,11 @@ const apiClient = axios.create({
 
 // 请求拦截器
 apiClient.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     // 在发送请求之前做些什么
     return config;
   },
-  (error) => {
+  (error: AxiosError) => {
     // 对请求错误做些什么
     console.error('请求错误:', error);
     return Promise.reject(error);
@@ -28,7 +28,7 @@ apiClient.interceptors.response.use(
     console.log('响应数据:', response.data);
     return response.data;
   },
-  (error) => {
+  (error: AxiosError) => {
     // 对响应错误做点什么
     console.error('响应错误:', error);
     

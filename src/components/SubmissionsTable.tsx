@@ -1,21 +1,40 @@
-// SubmissionsTable.jsx (关键片段)
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Table, Button, Card, Typography, Radio, Row, Col, Spin, Tooltip } from "antd";
+import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { formApi } from "../api";
 import { toShanghaiTime } from "../utils";
 import ReactECharts from 'echarts-for-react';
 import { useDragScroll } from "../hooks/useDragScroll";
+import type { EChartsOption } from 'echarts';
+
+interface Submission {
+  id: string | number;
+  created_at: string;
+  values?: Record<string, any>;
+}
+
+interface FormField {
+  field_key: string;
+  label: string;
+  order?: number;
+}
+
+interface ChartDataItem {
+  field_label: string;
+  option_value: string;
+  count: number;
+}
 
 export default function SubmissionsTable() {
-  const { formId } = useParams();
+  const { formId } = useParams<{ formId: string }>();
   const navigate = useNavigate();
-  const [submissions, setSubmissions] = useState([]);
-  const [columns, setColumns] = useState([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [columns, setColumns] = useState<ColumnsType<Submission>>([]);
   const [formTitle, setFormTitle] = useState("");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [chartData, setChartData] = useState([]);
+  const [chartData, setChartData] = useState<ChartDataItem[]>([]);
   const [chartLoading, setChartLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -27,19 +46,18 @@ export default function SubmissionsTable() {
   });
   
   // 根据标题估算列宽，控制最小/最大宽度，确保省略号效果
-  const calcColumnWidth = (text) => {
+  const calcColumnWidth = (text: string | undefined): number => {
     const str = String(text || "");
     // 中文字符按16px计算，英文按8px计算，加上padding
     const chineseChars = (str.match(/[\u4e00-\u9fa5]/g) || []).length;
     const otherChars = str.length - chineseChars;
     const estimated = chineseChars * 16 + otherChars * 6 + 58;
-    // const value = Math.max(120, Math.min(estimated, 380));
-    const value = Math.max(estimated, 220)
+    const value = Math.max(estimated, 220);
     return value;
   };
   
   // 分页状态
-  const [pagination, setPagination] = useState({
+  const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
     pageSize: 10,
     total: 0,
@@ -50,7 +68,7 @@ export default function SubmissionsTable() {
     simple: false,
   });
 
-  const [typeFilter, setTypeFilter] = useState("table");
+  const [typeFilter, setTypeFilter] = useState<"table" | "chart">("table");
 
   // 获取图表数据
   const fetchChartData = async () => {
@@ -69,7 +87,7 @@ export default function SubmissionsTable() {
   };
 
   // 生成饼图配置
-  const generatePieChartOption = (fieldData) => {
+  const generatePieChartOption = (fieldData: ChartDataItem[]): EChartsOption => {
     const data = fieldData.map(item => ({
       name: item.option_value,
       value: item.count
@@ -134,14 +152,16 @@ export default function SubmissionsTable() {
   };
 
   // 按字段分组数据
-  const groupedChartData = chartData.reduce((acc, item) => {
-    const key = item.field_label;
-    if (!acc[key]) {
-      acc[key] = [];
-    }
-    acc[key].push(item);
-    return acc;
-  }, {});
+  const groupedChartData = useMemo(() => {
+    return chartData.reduce((acc: Record<string, ChartDataItem[]>, item) => {
+      const key = item.field_label;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(item);
+      return acc;
+    }, {});
+  }, [chartData]);
 
   // 监听窗口大小变化
   useEffect(() => {
@@ -167,7 +187,7 @@ export default function SubmissionsTable() {
   }, [typeFilter, formId]);
 
   // 获取表单提交数据（支持分页）
-  const fetchSubmissions = async (page = 1, pageSize = 10) => {
+  const fetchSubmissions = async (page: number = 1, pageSize: number = 10) => {
     if (!formId) return;
     
     setLoading(true);
@@ -177,7 +197,7 @@ export default function SubmissionsTable() {
         formApi.getFormSubmissions(formId, page, pageSize)
       ]);
       
-      const submissions = subsData.items
+      const submissions = subsData.items;
       const total = subsData.total || submissions.length;
       
       setSubmissions(submissions);
@@ -193,39 +213,37 @@ export default function SubmissionsTable() {
       }));
 
       // 合并所有 field_key 做列，并按order排序
-      const keys = new Set();
+      const keys = new Set<string>();
       submissions.forEach((s) => {
         Object.keys(s.values || {}).forEach((k) => keys.add(k));
       });
 
       // 获取所有字段并按order排序
       const sortedFields = (form.fields || [])
-        .filter((f) => keys.has(f.field_key))
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
+        .filter((f: FormField) => keys.has(f.field_key))
+        .sort((a: FormField, b: FormField) => (a.order || 0) - (b.order || 0));
 
-      const cols = [
+      const cols: ColumnsType<Submission> = [
         {
           title: "提交时间",
           dataIndex: "created_at",
           key: "created_at",
           width: 150,
-          fixed: "left", // 固定在最左侧
-          render: (time) => {
+          fixed: "left",
+          render: (time: string) => {
             const timeStr = toShanghaiTime(time, "YYYY-MM-DD HH:mm:ss");
-            return (
-                <span>{timeStr}</span>
-            );
+            return <span>{timeStr}</span>;
           },
-          sorter: (a, b) => new Date(a.created_at) - new Date(b.created_at),
+          sorter: (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
           defaultSortOrder: "descend",
         },
-        ...sortedFields.map((f, index) => {
+        ...sortedFields.map((f) => {
           const columnWidth = calcColumnWidth(f.label || f.field_key);
           return {
             title: f.label || f.field_key,
             key: f.field_key,
             width: columnWidth,
-            render: (row) => {
+            render: (_: any, row: Submission) => {
               const v = row.values?.[f.field_key];
               const displayValue = Array.isArray(v) ? v.join(", ") : (v ?? "");
               return (
@@ -256,8 +274,8 @@ export default function SubmissionsTable() {
   };
 
   // 处理分页变化
-  const handleTableChange = (paginationInfo) => {
-    const { current, pageSize } = paginationInfo;
+  const handleTableChange = (paginationInfo: TablePaginationConfig) => {
+    const { current = 1, pageSize = 10 } = paginationInfo;
     fetchSubmissions(current, pageSize);
   };
 
@@ -308,8 +326,8 @@ export default function SubmissionsTable() {
               rowKey="id"
               loading={loading}
               scroll={{
-                x: "max-content", // 水平滚动
-                y: 500, // 垂直滚动，固定高度
+                x: "max-content",
+                y: 500,
               }}
               tableLayout="fixed"
               size="middle"

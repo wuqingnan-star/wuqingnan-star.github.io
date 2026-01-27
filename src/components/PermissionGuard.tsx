@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { Result, Button } from 'antd';
 import { LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { canAccessFormManagement } from '../utils/env';
 
-export default function PermissionGuard({ children, fallbackPath = '/' }) {
+interface PermissionGuardProps {
+  children: ReactNode;
+  fallbackPath?: string;
+}
+
+export default function PermissionGuard({ children, fallbackPath = '/' }: PermissionGuardProps) {
   const navigate = useNavigate();
 
   if (!canAccessFormManagement()) {
@@ -25,5 +30,5 @@ export default function PermissionGuard({ children, fallbackPath = '/' }) {
     );
   }
 
-  return children;
+  return <>{children}</>;
 }

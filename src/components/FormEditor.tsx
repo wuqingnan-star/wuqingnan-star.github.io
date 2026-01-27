@@ -1,14 +1,36 @@
-// FormEditor.jsx (核心片段)
 import React, { useEffect, useState } from 'react';
 import { Modal, Form, Input, Button, List, Switch, Select, Radio } from 'antd';
 import { formApi } from '../api';
-import FieldModal from './FieldModal'; // 字段编辑 Modal（下面给出）
+import FieldModal from './FieldModal';
 
-export default function FormEditor({ open, onClose, formData }) {
+interface FormField {
+  id?: number;
+  field_key: string;
+  label: string;
+  type: string;
+  options?: string[];
+  required?: boolean;
+  order?: number;
+}
+
+interface FormData {
+  id?: string | number;
+  title?: string;
+  description?: string;
+  fields?: FormField[];
+}
+
+interface FormEditorProps {
+  open: boolean;
+  onClose: () => void;
+  formData?: FormData | null;
+}
+
+export default function FormEditor({ open, onClose, formData }: FormEditorProps) {
   const [form] = Form.useForm();
-  const [fields, setFields] = useState([]);
+  const [fields, setFields] = useState<FormField[]>([]);
   const [fieldModalVisible, setFieldModalVisible] = useState(false);
-  const [editingField, setEditingField] = useState(null);
+  const [editingField, setEditingField] = useState<FormField | null>(null);
   const isEdit = !!formData?.id;
 
   useEffect(() => {
@@ -16,19 +38,27 @@ export default function FormEditor({ open, onClose, formData }) {
       if (formData) {
         form.setFieldsValue({ title: formData.title, description: formData.description });
         // fetch full form (包含字段)：
-        formApi.getForm(formData.id).then(payload => {
-          setFields((payload.fields || []).map(f => ({...f})));
-        });
+        if (formData.id) {
+          formApi.getForm(formData.id).then((payload: any) => {
+            setFields((payload.fields || []).map((f: FormField) => ({...f})));
+          });
+        }
       } else {
         form.resetFields();
         setFields([]);
       }
     }
-  }, [open]);
+  }, [open, formData, form]);
 
   const addField = () => { setEditingField(null); setFieldModalVisible(true); };
 
-  const onFieldSave = (field) => {
+  const onFieldSave = (field: {
+    field_key?: string;
+    label: string;
+    type: string;
+    options: string[];
+    required: boolean;
+  }) => {
     // field: { field_key?, label, type, options[], required }
     if (!field.field_key) {
       // new field: 生成一个临时字段 key（前端可生成，后端也可）
@@ -45,7 +75,7 @@ export default function FormEditor({ open, onClose, formData }) {
     setFieldModalVisible(false);
   };
 
-  const moveField = (idx, dir) => {
+  const moveField = (idx: number, dir: number) => {
     const copy = [...fields];
     const swap = idx + dir;
     if (swap < 0 || swap >= copy.length) return;
@@ -55,7 +85,7 @@ export default function FormEditor({ open, onClose, formData }) {
     setFields(copy);
   };
 
-  const removeField = (idx) => {
+  const removeField = (idx: number) => {
     Modal.confirm({
       title: '删除字段？',
       onOk() {
@@ -74,13 +104,13 @@ export default function FormEditor({ open, onClose, formData }) {
       }))
     };
     try {
-      if (isEdit) {
+      if (isEdit && formData?.id) {
         await formApi.updateForm(formData.id, payload);
       } else {
         await formApi.createForm(payload);
       }
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       Modal.error({ title: '保存失败', content: err.message || err.toString() });
     }
   };
@@ -128,7 +158,7 @@ export default function FormEditor({ open, onClose, formData }) {
 
       <FieldModal
         open={fieldModalVisible}
-        initialValues={editingField}
+        initialValues={editingField || undefined}
         onCancel={()=>setFieldModalVisible(false)}
         onSave={onFieldSave}
       />

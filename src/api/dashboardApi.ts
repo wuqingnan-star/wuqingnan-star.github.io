@@ -1,4 +1,4 @@
-import apiClient from './config.js';
+import apiClient from './config';
 
 // Dashboard数据API基础URL
 const DASHBOARD_BASE_URL = 'https://collect-vital-data.onrender.com/api';
@@ -28,7 +28,7 @@ export const dashboardApi = {
   },
 
   // 获取时间段统计数据
-  getDurationClicks: (startDate, endDate) => {
+  getDurationClicks: (startDate?: string | null, endDate?: string | null) => {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
@@ -51,7 +51,7 @@ export const dashboardApi = {
   },
 
   // 重置计数器
-  resetCounter: (newValue) => {
+  resetCounter: (newValue: number) => {
     return apiClient.post(`${DASHBOARD_BASE_URL}/reset-counter`, {
       newValue: newValue
     });

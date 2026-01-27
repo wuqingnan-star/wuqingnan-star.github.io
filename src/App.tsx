@@ -1,31 +1,21 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Layout, Menu, Button, theme } from "antd";
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   DashboardOutlined,
   BarChartOutlined,
-  PieChartOutlined,
-  LineChartOutlined,
   ThunderboltOutlined,
   FormOutlined,
   FileTextOutlined,
 } from "@ant-design/icons";
 import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
   useNavigate,
   useLocation,
   HashRouter,
+  useRoutes,
 } from "react-router-dom";
-import Dashboard from "./components/Dashboard";
-import WheelClickData from "./components/WheelClickData";
-import FormsList from "./components/FormsList";
-import FormRenderer from "./components/FormRenderer";
-import SubmissionsTable from "./components/SubmissionsTable";
-import PermissionGuard from "./components/PermissionGuard";
-import { canAccessFormManagement } from "./utils/env";
+import { routes } from "./routes";
 
 const { Header, Sider, Content } = Layout;
 
@@ -50,24 +40,36 @@ function AppContent() {
       label: "图表分析",
       children: [
         {
-          key: "bar-chart",
-          icon: <BarChartOutlined />,
-          label: "柱状图",
-        },
-        {
-          key: "pie-chart",
-          icon: <PieChartOutlined />,
-          label: "饼图",
-        },
-        {
-          key: "line-chart",
-          icon: <LineChartOutlined />,
-          label: "折线图",
-        },
-        {
           key: "wheel-click-data",
           icon: <ThunderboltOutlined />,
           label: "转盘数据",
+        },
+      ],
+    },
+    {
+      key: "hmc",
+      icon: <BarChartOutlined />,
+      label: "HMC模块",
+      children: [
+        {
+          key: "hmc-options-stats",
+          icon: <ThunderboltOutlined />,
+          label: "HMC选项统计",
+        },
+        {
+          key: "hmc-step-dwell",
+          icon: <ThunderboltOutlined />,
+          label: "HMC停留时长",
+        },
+        {
+          key: "hmc-dropoff-report",
+          icon: <ThunderboltOutlined />,
+          label: "HMC流失报告",
+        },
+        {
+          key: "hmc-conversion-stats",
+          icon: <ThunderboltOutlined />,
+          label: "HMC转化统计",
         },
       ],
     },
@@ -87,19 +89,21 @@ function AppContent() {
     ],
   ];
 
-  const handleMenuClick = ({ key }) => {
-    if (key === "dashboard") {
-      navigate("/");
-    } else if (key === "bar-chart") {
-      navigate("/bar-chart");
-    } else if (key === "pie-chart") {
-      navigate("/pie-chart");
-    } else if (key === "line-chart") {
-      navigate("/line-chart");
-    } else if (key === "wheel-click-data") {
-      navigate("/wheel-click-data");
-    } else if (key === "forms-list") {
-      navigate("/forms");
+  // 菜单项到路由路径的映射
+  const menuKeyToPath: Record<string, string> = {
+    dashboard: "/",
+    "wheel-click-data": "/wheel-click-data",
+    "forms-list": "/forms",
+    "hmc-options-stats": "/hmc-options-stats",
+    "hmc-step-dwell": "/hmc-step-dwell",
+    "hmc-dropoff-report": "/hmc-dropoff-report",
+    "hmc-conversion-stats": "/hmc-conversion-stats",
+  };
+
+  const handleMenuClick = ({ key }: { key: string }) => {
+    const path = menuKeyToPath[key];
+    if (path) {
+      navigate(path);
     }
   };
 
@@ -107,13 +111,14 @@ function AppContent() {
   const getSelectedKey = () => {
     const path = location.pathname;
     if (path === "/") return "dashboard";
-    if (path === "/bar-chart") return "bar-chart";
-    if (path === "/pie-chart") return "pie-chart";
-    if (path === "/line-chart") return "line-chart";
     if (path === "/wheel-click-data") return "wheel-click-data";
     if (path === "/forms") return "forms-list";
     if (path.startsWith("/form/")) return "forms-list";
     if (path.startsWith("/admin/forms/")) return "forms-list";
+    if (path === "/hmc-options-stats") return "hmc-options-stats";
+    if (path === "/hmc-step-dwell") return "hmc-step-dwell";
+    if (path === "/hmc-dropoff-report") return "hmc-dropoff-report";
+    if (path === "/hmc-conversion-stats") return "hmc-conversion-stats";
     return "dashboard";
   };
 
@@ -168,28 +173,7 @@ function AppContent() {
             overflow: "hidden",
           }}
         >
-          <Routes>
-            <Route path="/" element={<Dashboard chartType="dashboard" />} />
-            <Route
-              path="/bar-chart"
-              element={<Dashboard chartType="bar-chart" />}
-            />
-            <Route
-              path="/pie-chart"
-              element={<Dashboard chartType="pie-chart" />}
-            />
-            <Route
-              path="/line-chart"
-              element={<Dashboard chartType="line-chart" />}
-            />
-            <Route path="/wheel-click-data" element={<WheelClickData />} />
-            <Route path="/forms" element={<FormsList />} />
-            <Route path="/form/:formId" element={<FormRenderer />} />
-            <Route
-              path="/admin/forms/:formId/submissions"
-              element={<SubmissionsTable />}
-            />
-          </Routes>
+          {useRoutes(routes)}
         </Content>
       </Layout>
     </Layout>

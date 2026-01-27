@@ -1,4 +1,16 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, RefObject } from 'react';
+
+interface UseDragScrollOptions {
+  enabled?: boolean;
+  sensitivity?: number;
+  preventDefault?: boolean;
+  scrollContainerSelector?: string;
+}
+
+interface UseDragScrollReturn {
+  containerRef: RefObject<HTMLDivElement>;
+  bindEvents: () => () => void;
+}
 
 /**
  * 自定义Hook：实现鼠标拖拽横向滚动功能
@@ -9,7 +21,7 @@ import { useRef, useCallback } from 'react';
  * @param {string} options.scrollContainerSelector - 滚动容器的CSS选择器，默认为'.ant-table-body'
  * @returns {Object} 返回ref和样式对象
  */
-export const useDragScroll = (options = {}) => {
+export const useDragScroll = (options: UseDragScrollOptions = {}): UseDragScrollReturn => {
   const {
     enabled = true,
     sensitivity = 1,
@@ -17,20 +29,20 @@ export const useDragScroll = (options = {}) => {
     scrollContainerSelector = '.ant-table-body'
   } = options;
 
-  const containerRef = useRef(null);
-  const scrollContainerRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
   const isDraggingRef = useRef(false);
   const startXRef = useRef(0);
   const scrollLeftRef = useRef(0);
 
-  const handleMouseDown = useCallback((e) => {
+  const handleMouseDown = useCallback((e: MouseEvent) => {
     if (!enabled || !containerRef.current) return;
     
     // 只允许鼠标左键拖拽
     if (e.button !== 0) return;
     
     // 查找实际的滚动容器
-    const scrollContainer = containerRef.current.querySelector(scrollContainerSelector);
+    const scrollContainer = containerRef.current.querySelector(scrollContainerSelector) as HTMLElement;
     if (!scrollContainer) return;
     
     scrollContainerRef.current = scrollContainer;
@@ -47,7 +59,7 @@ export const useDragScroll = (options = {}) => {
     }
   }, [enabled, preventDefault, scrollContainerSelector]);
 
-  const handleMouseMove = useCallback((e) => {
+  const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!enabled || !isDraggingRef.current || !scrollContainerRef.current) return;
     
     e.preventDefault();
@@ -79,13 +91,13 @@ export const useDragScroll = (options = {}) => {
 
   // 绑定事件监听器
   const bindEvents = useCallback(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) return () => {};
 
     const container = containerRef.current;
     
     // 等待表格渲染完成后再绑定事件
-    const waitForTableBody = () => {
-      const tableBody = container.querySelector(scrollContainerSelector);
+    const waitForTableBody = (): boolean => {
+      const tableBody = container.querySelector(scrollContainerSelector) as HTMLElement;
       if (tableBody) {
         // 设置表格body的初始样式
         tableBody.style.cursor = 'grab';

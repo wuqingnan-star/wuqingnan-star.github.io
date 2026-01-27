@@ -14,6 +14,7 @@ import {
   Divider,
   Select,
 } from "antd";
+import type { Dayjs } from "dayjs";
 import {
   UserOutlined,
   ShoppingCartOutlined,
@@ -25,40 +26,56 @@ import {
 } from "@ant-design/icons";
 
 import ReactECharts from "echarts-for-react";
+import type { EChartsReactProps } from "echarts-for-react";
 import * as echarts from "echarts";
 import dayjs from "dayjs";
 import { wheelApi } from "../api";
+import type { EChartsOption } from "echarts";
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
 
+interface ClickCountItem {
+  name: string;
+  value: number;
+  itemStyle?: {
+    color: string;
+  };
+}
+
+interface DateRangeOption {
+  label: string;
+  value: string;
+  dates: [Dayjs, Dayjs];
+}
+
 const WheelClickData = () => {
-  const [clickCounts, setClickCounts] = useState([]);
-  const [productClickCounts, setProductClickCounts] = useState([]);
+  const [clickCounts, setClickCounts] = useState<ClickCountItem[]>([]);
+  const [productClickCounts, setProductClickCounts] = useState<ClickCountItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [productLoading, setProductLoading] = useState(true);
-  const [timeFilter, setTimeFilter] = useState("daily"); // 时间筛选状态，默认为日
-  const [productDateRange, setProductDateRange] = useState([
+  const [timeFilter, setTimeFilter] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [productDateRange, setProductDateRange] = useState<[Dayjs, Dayjs]>([
     dayjs().startOf("month"),
     dayjs().endOf("month"),
-  ]); // 产品饼图的日期范围筛选，默认本月
+  ]);
   
   // 统计数据状态
   const [newUsersCount, setNewUsersCount] = useState(0);
-  const [homePageShowCount, setHomePageShowCount] = useState(0); // 首页展示次数
-  const [mainSiteShowCount, setMainSiteShowCount] = useState(0); // 主站展示次数
-  const [warmupPageShowCount, setWarmupPageShowCount] = useState(0); // 预热页展示次数
-  const [totalShowCount, setTotalShowCount] = useState(0); // 总展示次数
+  const [homePageShowCount, setHomePageShowCount] = useState(0);
+  const [mainSiteShowCount, setMainSiteShowCount] = useState(0);
+  const [warmupPageShowCount, setWarmupPageShowCount] = useState(0);
+  const [totalShowCount, setTotalShowCount] = useState(0);
   const [statisticsLoading, setStatisticsLoading] = useState(true);
-  const [statisticsTimeFilter, setStatisticsTimeFilter] = useState("day"); // 统计数据的日周月筛选
-  const [isMobile, setIsMobile] = useState(false); // 移动端检测状态
+  const [statisticsTimeFilter, setStatisticsTimeFilter] = useState<"day" | "week" | "month">("day");
+  const [isMobile, setIsMobile] = useState(false);
   
   // 图表实例引用
-  const chartRef1 = useRef(null);
-  const chartRef2 = useRef(null);
+  const chartRef1 = useRef<ReactECharts>(null);
+  const chartRef2 = useRef<ReactECharts>(null);
 
   // 预设的日期范围选项
-  const dateRangeOptions = [
+  const dateRangeOptions: DateRangeOption[] = [
     {
       label: "最近7天",
       value: "last7days",
@@ -99,7 +116,7 @@ const WheelClickData = () => {
   }, [isMobile]);
 
   // 根据时间筛选获取对应的API方法
-  const getApiMethodByTimeFilter = (filter) => {
+  const getApiMethodByTimeFilter = (filter: "daily" | "weekly" | "monthly") => {
     switch (filter) {
       case "daily":
         return wheelApi.getDailyStats;
@@ -113,7 +130,7 @@ const WheelClickData = () => {
   };
 
   // 获取时间筛选的显示文本
-  const getTimeFilterText = (filter) => {
+  const getTimeFilterText = (filter: "daily" | "weekly" | "monthly"): string => {
     switch (filter) {
       case "daily":
         return "日";
@@ -127,22 +144,24 @@ const WheelClickData = () => {
   };
 
   // 处理时间筛选变化
-  const handleTimeFilterChange = (value) => {
+  const handleTimeFilterChange = (value: "daily" | "weekly" | "monthly") => {
     setTimeFilter(value);
   };
 
   // 处理统计数据时间筛选变化
-  const handleStatisticsTimeFilterChange = (value) => {
+  const handleStatisticsTimeFilterChange = (value: "day" | "week" | "month") => {
     setStatisticsTimeFilter(value);
   };
 
   // 处理产品饼图日期范围变化
-  const handleProductDateRangeChange = (dates) => {
-    setProductDateRange(dates);
+  const handleProductDateRangeChange = (dates: [Dayjs, Dayjs] | null) => {
+    if (dates) {
+      setProductDateRange(dates);
+    }
   };
 
   // 处理移动端Select选择变化
-  const handleDateRangeSelectChange = (value) => {
+  const handleDateRangeSelectChange = (value: string) => {
     const selectedOption = dateRangeOptions.find(option => option.value === value);
     if (selectedOption) {
       setProductDateRange(selectedOption.dates);
@@ -162,7 +181,7 @@ const WheelClickData = () => {
   };
 
   // 颜色映射函数
-  const getColorForButton = (buttonName) => {
+  const getColorForButton = (buttonName: string): string => {
     const name = buttonName.toLowerCase();
     
     if (name.includes("launch") || name.includes("icon")) {
@@ -178,7 +197,7 @@ const WheelClickData = () => {
   };
 
   // 为数据项添加颜色
-  const addColorsToData = (data) => {
+  const addColorsToData = (data: ClickCountItem[]): ClickCountItem[] => {
     return data.map(item => ({
       ...item,
       itemStyle: {
@@ -193,7 +212,7 @@ const WheelClickData = () => {
       const data = await wheelApi.getStatistics(statisticsTimeFilter);
       
       if (data.success && data.data) {
-        const stats = data.data;
+        const stats: any = data.data;
         setNewUsersCount(stats.new_users_count || 0);
         setHomePageShowCount(stats.home_show_count || 0);
         setMainSiteShowCount(stats.www_show_count || 0);
@@ -243,10 +262,10 @@ const WheelClickData = () => {
         endDate = productDateRange[1].format("YYYY-MM-DD");
       }
 
-      const data = await wheelApi.getDurationStats(startDate, endDate);
+      const data: Record<string, number> = await wheelApi.getDurationStats(startDate, endDate);
 
       // 处理产品点击数据
-      const productClicks = Object.entries(data).map(([product, count]) => ({
+      const productClicks: ClickCountItem[] = Object.entries(data).map(([product, count]) => ({
         name: product,
         value: count,
       })).filter(item => !item.name.toLowerCase().includes("new-customer"));
@@ -309,10 +328,10 @@ const WheelClickData = () => {
     const apiMethod = getApiMethodByTimeFilter(timeFilter);
 
     apiMethod()
-      .then((data) => {
+      .then((data: Record<string, number>) => {
         console.log("data-----------------------", data);
         // 处理新的数据格式 {"add-to-cart":2,"buy-now":1}
-        const clickCounts = Object.entries(data)
+        const clickCounts: ClickCountItem[] = Object.entries(data)
           .map(([button, count]) => ({
             name: button,
             value: count,
@@ -377,7 +396,7 @@ const WheelClickData = () => {
   }, [isMobile]);
 
   // 饼图配置
-  const getPieChartOption = () => ({
+  const getPieChartOption = (): EChartsOption => ({
     title: {
       text: `转盘数据 (${getTimeFilterText(timeFilter)})`,
       left: "center",
@@ -438,7 +457,7 @@ const WheelClickData = () => {
   });
 
   // 产品点击饼图配置
-  const getProductPieChartOption = () => ({
+  const getProductPieChartOption = (): EChartsOption => ({
     title: {
       text: `转盘数据 (${productDateRange[0].format(
         "MM-DD"

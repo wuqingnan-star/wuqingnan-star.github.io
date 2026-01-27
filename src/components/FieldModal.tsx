@@ -1,8 +1,26 @@
-// FieldModal.jsx
 import React, { useEffect } from 'react';
 import { Modal, Form, Input, Select, Checkbox } from 'antd';
 
-export default function FieldModal({ open, onCancel, onSave, initialValues }) {
+interface FieldModalProps {
+  open: boolean;
+  onCancel: () => void;
+  onSave: (field: {
+    field_key?: string;
+    label: string;
+    type: string;
+    options: string[];
+    required: boolean;
+  }) => void;
+  initialValues?: {
+    field_key?: string;
+    label?: string;
+    type?: string;
+    options?: string[];
+    required?: boolean;
+  };
+}
+
+export default function FieldModal({ open, onCancel, onSave, initialValues }: FieldModalProps) {
   const [form] = Form.useForm();
 
   useEffect(() => {
@@ -16,11 +34,11 @@ export default function FieldModal({ open, onCancel, onSave, initialValues }) {
         field_key: initialValues?.field_key
       });
     }
-  }, [open]);
+  }, [open, form, initialValues]);
 
   const onOk = async () => {
     const v = await form.validateFields();
-    const options = v.options ? v.options.split('\n').map(s => s.trim()).filter(Boolean) : [];
+    const options = v.options ? v.options.split('\n').map((s: string) => s.trim()).filter(Boolean) : [];
     onSave({
       field_key: v.field_key,
       label: v.label,

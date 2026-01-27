@@ -4,7 +4,7 @@
  * 检查当前环境是否为开发环境
  * @returns {boolean} 是否为开发环境
  */
-export const isDevelopment = () => {
+export const isDevelopment = (): boolean => {
   return (
     import.meta.env.DEV || // Vite 开发环境
     import.meta.env.MODE === 'development' || // 开发模式
@@ -20,7 +20,7 @@ export const isDevelopment = () => {
  * 检查当前环境是否为生产环境
  * @returns {boolean} 是否为生产环境
  */
-export const isProduction = () => {
+export const isProduction = (): boolean => {
   return (
     import.meta.env.PROD || // Vite 生产环境
     import.meta.env.MODE === 'production' || // 生产模式
@@ -33,7 +33,7 @@ export const isProduction = () => {
  * 获取当前环境名称
  * @returns {string} 环境名称
  */
-export const getEnvironment = () => {
+export const getEnvironment = (): string => {
   if (isDevelopment()) return 'development';
   if (isProduction()) return 'production';
   return 'unknown';
@@ -43,6 +43,6 @@ export const getEnvironment = () => {
  * 检查是否允许访问表单管理功能
  * @returns {boolean} 是否允许访问
  */
-export const canAccessFormManagement = () => {
+export const canAccessFormManagement = (): boolean => {
   return isDevelopment();
 };

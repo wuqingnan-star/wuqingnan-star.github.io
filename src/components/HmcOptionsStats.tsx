@@ -210,7 +210,7 @@ const HmcOptionsStats = () => {
     },
     series: [
       {
-        name: '',
+        name: 'total counts',
         type: 'pie',
         radius: '50%',
         data: addColorsToData(data),

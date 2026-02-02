@@ -70,19 +70,17 @@ export default function HmcDropoffReport() {
       };
     }
 
-    // 处理数据，按步骤排序
-    const sortedData = [...data].sort((a, b) => a.step_num - b.step_num);
-
-    // 准备漏斗图数据
-    const funnelData = sortedData.map((item) => {
+    // 准备原始数据
+    const rawData = data.map((item) => {
       return {
         value: item.drop_count,
         name: getStepName(item.step_num),
+        step_num: item.step_num,
       };
     });
 
     // 获取图例数据
-    const legendData = funnelData.map(item => item.name);
+    const legendData = rawData.map(item => item.name);
 
     return {
       title: {
@@ -97,10 +95,25 @@ export default function HmcDropoffReport() {
         data: legendData,
         top: '5%',
       },
+      dataset: [
+        {
+          source: rawData,
+        },
+        {
+          transform: {
+            type: 'sort',
+            config: {
+              dimension: 'step_num',
+              order: 'asc',
+            },
+          },
+        },
+      ],
       series: [
         {
           name: '流失人数',
           type: 'funnel',
+          datasetIndex: 1,
           left: '10%',
           top: '15%',
           width: '80%',
@@ -110,7 +123,10 @@ export default function HmcDropoffReport() {
           label: {
             position: 'inside',
           },
-          data: funnelData,
+          encode: {
+            itemName: 'name',
+            value: 'value',
+          },
         },
       ],
     };

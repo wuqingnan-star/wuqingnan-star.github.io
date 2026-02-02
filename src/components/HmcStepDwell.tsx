@@ -62,7 +62,7 @@ export default function HmcStepDwell() {
     
     const stepNumbers = sortedData.map(item => `步骤 ${item.step_number}`);
     const medianDwells = sortedData.map(item => item.median_dwell);
-    const maxDwells = sortedData.map(item => item.max_dwell);
+    const maxDwells = sortedData.map(item => Math.min(item.max_dwell, 99999));
 
     return {
       title: {
